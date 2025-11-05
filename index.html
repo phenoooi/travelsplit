@@ -165,31 +165,50 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            padding: 12px;
-            background: white;
-            border-radius: 8px;
             margin-top: 8px;
         }
         
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            gap: 10px;
+            padding: 8px 0;
         }
         
         .checkbox-group input[type="checkbox"] {
             width: 24px;
             height: 24px;
             cursor: pointer;
+            flex-shrink: 0;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            background: white;
+            position: relative;
+        }
+        
+        .checkbox-group input[type="checkbox"]:checked {
+            background: #667eea;
+        }
+        
+        .checkbox-group input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
         
         .checkbox-group label {
-            margin: 0;
             flex: 1;
             font-size: 15px;
+            color: #333;
+            cursor: pointer;
         }
         
         .btn {
@@ -669,6 +688,7 @@
                 <div class="names-grid" id="names-grid"></div>
                 
                 <button class="btn btn-primary" id="save-names-btn">💾 Save Names</button>
+                <button class="btn btn-secondary" id="add-traveler-btn">➕ Add Traveler</button>
                 <button class="btn btn-secondary" id="reset-names-btn">🔄 Reset to Defaults</button>
             </div>
         </div>
@@ -705,7 +725,9 @@
             const app = {
                 expenses: [],
                 payments: [],
+                paymentHistory: [],
                 people: ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'],
+                numPeople: 7,
                 isLoading: false,
                 
                 init: function() {
@@ -741,10 +763,11 @@
                 },
                 
                 renderNameInputs: function() {
-                    document.getElementById('names-grid').innerHTML = Array.from({ length: 7 }, (_, i) => `
+                    const grid = document.getElementById('names-grid');
+                    grid.innerHTML = this.people.map((person, i) => `
                         <div class="form-group">
                             <label>Traveler ${i + 1}</label>
-                            <input type="text" id="name-${i}" placeholder="Person ${i + 1}">
+                            <input type="text" id="name-${i}" placeholder="Person ${i + 1}" value="${person}">
                         </div>
                     `).join('');
                 },
@@ -760,6 +783,7 @@
                     
                     document.getElementById('add-expense-btn').addEventListener('click', () => this.addExpense());
                     document.getElementById('save-names-btn').addEventListener('click', () => this.saveNames());
+                    document.getElementById('add-traveler-btn').addEventListener('click', () => this.addTraveler());
                     document.getElementById('reset-names-btn').addEventListener('click', () => this.resetNames());
                     document.getElementById('export-json-btn').addEventListener('click', () => this.exportToJSON());
                     document.getElementById('export-csv-btn').addEventListener('click', () => this.exportToCSV());
@@ -783,14 +807,17 @@
                         self.calculateSettlements();
                     });
                     
+                    database.ref('paymentHistory').on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        self.paymentHistory = data ? Object.values(data) : [];
+                        self.renderPaymentHistory();
+                    });
+                    
                     database.ref('people').on('value', (snapshot) => {
                         const data = snapshot.val();
                         if (data) {
                             self.people = data;
-                            for (let i = 0; i < 7; i++) {
-                                const input = document.getElementById(`name-${i}`);
-                                if (input) input.value = self.people[i];
-                            }
+                            self.renderNameInputs();
                             self.populateDropdowns();
                         }
                     });
@@ -800,21 +827,21 @@
                     const saved = {
                         expenses: localStorage.getItem('japan-expenses'),
                         payments: localStorage.getItem('japan-payments'),
+                        paymentHistory: localStorage.getItem('japan-paymentHistory'),
                         people: localStorage.getItem('japan-people')
                     };
                     
                     if (saved.expenses) this.expenses = JSON.parse(saved.expenses);
                     if (saved.payments) this.payments = JSON.parse(saved.payments);
+                    if (saved.paymentHistory) this.paymentHistory = JSON.parse(saved.paymentHistory);
                     if (saved.people) {
                         this.people = JSON.parse(saved.people);
-                        for (let i = 0; i < 7; i++) {
-                            const input = document.getElementById(`name-${i}`);
-                            if (input) input.value = this.people[i];
-                        }
+                        this.renderNameInputs();
                     }
                     
                     this.populateDropdowns();
                     this.renderExpenses();
+                    this.renderPaymentHistory();
                 },
                 
                 saveToFirebase: async function(path, data) {
@@ -863,15 +890,25 @@
                     if (splitCheckboxes) {
                         splitCheckboxes.innerHTML = this.people.map((p, i) => `
                             <div class="checkbox-group">
-                                <input type="checkbox" id="split-person${i}" checked>
+                                <input type="checkbox" id="split-person${i}">
                                 <label for="split-person${i}">${p}</label>
                             </div>
                         `).join('');
                     }
                 },
                 
+                addTraveler: function() {
+                    const newName = prompt('Enter new traveler name:');
+                    if (newName && newName.trim()) {
+                        this.people.push(newName.trim());
+                        this.renderNameInputs();
+                        this.populateDropdowns();
+                        alert('✓ Traveler added! Click "Save Names" to sync with everyone.');
+                    }
+                },
+                
                 saveNames: async function() {
-                    for (let i = 0; i < 7; i++) {
+                    for (let i = 0; i < this.people.length; i++) {
                         const input = document.getElementById(`name-${i}`);
                         if (input) {
                             this.people[i] = input.value.trim() || `Person ${i + 1}`;
@@ -886,11 +923,9 @@
                 },
                 
                 resetNames: async function() {
-                    if (confirm('Reset all names to defaults?')) {
+                    if (confirm('Reset all names to 7 default travelers?')) {
                         this.people = ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'];
-                        for (let i = 0; i < 7; i++) {
-                            document.getElementById(`name-${i}`).value = '';
-                        }
+                        this.renderNameInputs();
                         await this.saveNames();
                     }
                 },
@@ -911,7 +946,7 @@
                     }
                     
                     const splitBetween = [];
-                    for (let i = 0; i < 7; i++) {
+                    for (let i = 0; i < this.people.length; i++) {
                         const checkbox = document.getElementById(`split-person${i}`);
                         if (checkbox?.checked) splitBetween.push(this.people[i]);
                     }
@@ -948,9 +983,9 @@
                     
                     document.getElementById('expense-description').value = '';
                     document.getElementById('expense-amount').value = '';
-                    for (let i = 0; i < 7; i++) {
+                    for (let i = 0; i < this.people.length; i++) {
                         const checkbox = document.getElementById(`split-person${i}`);
-                        if (checkbox) checkbox.checked = true;
+                        if (checkbox) checkbox.checked = false;
                     }
                     
                     this.isLoading = false;
@@ -1030,17 +1065,108 @@
                     });
                 },
                 
-                markAsPaid: async function(from, to) {
+                markAsPaid: async function(from, to, amount) {
                     const settlementId = `${from}→${to}`;
+                    
+                    // Add to payment history
+                    const payment = {
+                        id: Date.now(),
+                        from: from,
+                        to: to,
+                        amount: amount,
+                        date: new Date().toISOString()
+                    };
+                    
+                    this.paymentHistory.push(payment);
+                    
+                    // Add to payments list to hide from pending
                     if (!this.payments.includes(settlementId)) {
                         this.payments.push(settlementId);
-                        await this.saveToFirebase('payments', this.payments);
                     }
+                    
+                    // Save both
+                    if (isFirebaseConfigured) {
+                        const historyObj = {};
+                        this.paymentHistory.forEach(p => historyObj[p.id] = p);
+                        await database.ref('paymentHistory').set(historyObj);
+                        await this.saveToFirebase('payments', this.payments);
+                    } else {
+                        await this.saveToFirebase('paymentHistory', this.paymentHistory);
+                        await this.saveToFirebase('payments', this.payments);
+                        this.renderPaymentHistory();
+                        this.calculateSettlements();
+                    }
+                },
+                
+                undoPayment: async function(paymentId) {
+                    const payment = this.paymentHistory.find(p => p.id === paymentId);
+                    if (!payment) return;
+                    
+                    if (!confirm(`Undo payment: ${payment.from} → ${payment.to} ₱${payment.amount.toFixed(2)}?`)) return;
+                    
+                    // Remove from history
+                    this.paymentHistory = this.paymentHistory.filter(p => p.id !== paymentId);
+                    
+                    // Remove from payments list
+                    const settlementId = `${payment.from}→${payment.to}`;
+                    this.payments = this.payments.filter(id => id !== settlementId);
+                    
+                    // Save both
+                    if (isFirebaseConfigured) {
+                        const historyObj = {};
+                        this.paymentHistory.forEach(p => historyObj[p.id] = p);
+                        await database.ref('paymentHistory').set(historyObj);
+                        await this.saveToFirebase('payments', this.payments);
+                    } else {
+                        await this.saveToFirebase('paymentHistory', this.paymentHistory);
+                        await this.saveToFirebase('payments', this.payments);
+                        this.renderPaymentHistory();
+                        this.calculateSettlements();
+                    }
+                },
+                
+                renderPaymentHistory: function() {
+                    const container = document.getElementById('payment-history');
+                    if (!container) return;
+                    
+                    if (this.paymentHistory.length === 0) {
+                        container.innerHTML = '<div class="empty-state"><p style="color: #999;">No payment history yet</p></div>';
+                        return;
+                    }
+                    
+                    const self = this;
+                    const sorted = [...this.paymentHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    container.innerHTML = sorted.map(payment => {
+                        const date = new Date(payment.date);
+                        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        
+                        return `
+                            <div class="payment-history-item">
+                                <div class="payment-history-info">
+                                    <div class="payment-history-text">
+                                        <strong>${payment.from}</strong> paid <strong>${payment.to}</strong>
+                                    </div>
+                                    <div class="payment-history-date">✓ ${dateStr}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="payment-history-amount">₱${payment.amount.toFixed(2)}</div>
+                                    <button class="btn btn-undo" data-undo-id="${payment.id}" style="margin-top: 8px;">↩️ Undo</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    container.querySelectorAll('[data-undo-id]').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            self.undoPayment(parseInt(this.dataset.undoId));
+                        });
+                    });
                 },
                 
                 updateSummary: function() {
                     const totalSpent = this.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-                    const avgPerPerson = totalSpent / 7;
+                    const avgPerPerson = totalSpent / this.people.length;
                     
                     document.getElementById('total-spent').textContent = `₱${totalSpent.toFixed(2)}`;
                     document.getElementById('per-person-avg').textContent = `₱${avgPerPerson.toFixed(2)}`;
@@ -1110,31 +1236,32 @@
                         });
                     });
                     
+                    // Calculate consolidated debts between each pair
                     const settlements = [];
                     
-                    // Show all individual debts without consolidation
                     this.people.forEach(debtor => {
                         this.people.forEach(creditor => {
                             if (debtor === creditor) return;
                             
-                            let debtAmount = 0;
+                            let netDebt = 0;
                             
                             this.expenses.forEach(exp => {
                                 if (exp.paidBy === creditor && exp.splitBetween.includes(debtor)) {
-                                    debtAmount += exp.amount / exp.splitBetween.length;
+                                    netDebt += exp.amount / exp.splitBetween.length;
                                 }
                                 if (exp.paidBy === debtor && exp.splitBetween.includes(creditor)) {
-                                    debtAmount -= exp.amount / exp.splitBetween.length;
+                                    netDebt -= exp.amount / exp.splitBetween.length;
                                 }
                             });
                             
-                            if (debtAmount > 0.01) {
+                            if (netDebt > 0.01) {
                                 const settlementId = `${debtor}→${creditor}`;
+                                // Only show if not already paid
                                 if (!this.payments.includes(settlementId)) {
                                     settlements.push({
                                         from: debtor,
                                         to: creditor,
-                                        amount: debtAmount
+                                        amount: netDebt
                                     });
                                 }
                             }
@@ -1156,14 +1283,14 @@
                                 <div class="settlement-amount">₱${s.amount.toFixed(2)}</div>
                             </div>
                             <div class="settlement-actions">
-                                <button class="btn btn-success" data-pay-from="${s.from}" data-pay-to="${s.to}">✓ Mark as Paid</button>
+                                <button class="btn btn-success" data-pay-from="${s.from}" data-pay-to="${s.to}" data-pay-amount="${s.amount}">✓ Mark as Paid</button>
                             </div>
                         </div>
                     `).join('');
                     
                     container.querySelectorAll('[data-pay-from]').forEach(btn => {
                         btn.addEventListener('click', function() {
-                            self.markAsPaid(this.dataset.payFrom, this.dataset.payTo);
+                            self.markAsPaid(this.dataset.payFrom, this.dataset.payTo, parseFloat(this.dataset.payAmount));
                         });
                     });
                 },
@@ -1176,14 +1303,18 @@
                         if (isFirebaseConfigured) {
                             await database.ref('expenses').remove();
                             await database.ref('payments').remove();
+                            await database.ref('paymentHistory').remove();
                         } else {
                             localStorage.removeItem('japan-expenses');
                             localStorage.removeItem('japan-payments');
+                            localStorage.removeItem('japan-paymentHistory');
                         }
                         
                         this.expenses = [];
                         this.payments = [];
+                        this.paymentHistory = [];
                         this.renderExpenses();
+                        this.renderPaymentHistory();
                         alert('✓ All data reset');
                     } catch (error) {
                         alert('Failed to reset: ' + error.message);
@@ -1225,7 +1356,7 @@
                     const totalSpent = this.expenses.reduce((sum, exp) => sum + exp.amount, 0);
                     let text = `🇯🇵 JAPAN 2025 EXPENSES\n\n`;
                     text += `Total: ₱${totalSpent.toFixed(2)}\n`;
-                    text += `Per Person: ₱${(totalSpent / 7).toFixed(2)}\n\n`;
+                    text += `Per Person: ₱${(totalSpent / this.people.length).toFixed(2)}\n\n`;
                     
                     text += `BALANCES:\n`;
                     const balances = {};
