@@ -678,6 +678,18 @@
         
         <div id="settings-tab" class="tab-content">
             <div class="summary-card">
+                <h3>🏷️ Trip Name</h3>
+                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Customize your trip name</p>
+                
+                <div class="form-group">
+                    <label>Trip Name</label>
+                    <input type="text" id="trip-name-input" placeholder="e.g., 🇯🇵 Japan 2025">
+                </div>
+                
+                <button class="btn btn-primary" id="save-trip-name-btn">💾 Save Trip Name</button>
+            </div>
+            
+            <div class="summary-card" style="margin-top: 16px;">
                 <h3>👥 Traveler Names</h3>
                 <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Changes sync to everyone!</p>
                 
@@ -727,6 +739,7 @@
                 payments: [],
                 paymentHistory: [],
                 people: ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'],
+                tripName: '🌍 Expense Tracker',
                 numPeople: 7,
                 isLoading: false,
                 
@@ -745,8 +758,13 @@
                 setupDOM: function() {
                     const dateInput = document.getElementById('expense-date');
                     if (dateInput) dateInput.valueAsDate = new Date();
+                    
+                    const tripNameInput = document.getElementById('trip-name-input');
+                    if (tripNameInput) tripNameInput.value = this.tripName;
+                    
                     this.renderTabs();
                     this.renderNameInputs();
+                    this.updateTripNameDisplay();
                 },
                 
                 renderTabs: function() {
@@ -782,6 +800,7 @@
                     });
                     
                     document.getElementById('add-expense-btn').addEventListener('click', () => this.addExpense());
+                    document.getElementById('save-trip-name-btn').addEventListener('click', () => this.saveTripName());
                     document.getElementById('save-names-btn').addEventListener('click', () => this.saveNames());
                     document.getElementById('add-traveler-btn').addEventListener('click', () => this.addTraveler());
                     document.getElementById('reset-names-btn').addEventListener('click', () => this.resetNames());
@@ -822,6 +841,16 @@
                             self.populateDropdowns();
                         }
                     });
+                    
+                    database.ref('tripName').on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            self.tripName = data;
+                            self.updateTripNameDisplay();
+                            const input = document.getElementById('trip-name-input');
+                            if (input) input.value = data;
+                        }
+                    });
                 },
                 
                 loadFromLocalStorage: function() {
@@ -829,7 +858,8 @@
                         expenses: localStorage.getItem('japan-expenses'),
                         payments: localStorage.getItem('japan-payments'),
                         paymentHistory: localStorage.getItem('japan-paymentHistory'),
-                        people: localStorage.getItem('japan-people')
+                        people: localStorage.getItem('japan-people'),
+                        tripName: localStorage.getItem('japan-tripName')
                     };
                     
                     if (saved.expenses) this.expenses = JSON.parse(saved.expenses);
@@ -838,6 +868,12 @@
                     if (saved.people) {
                         this.people = JSON.parse(saved.people);
                         this.renderNameInputs();
+                    }
+                    if (saved.tripName) {
+                        this.tripName = saved.tripName;
+                        this.updateTripNameDisplay();
+                        const input = document.getElementById('trip-name-input');
+                        if (input) input.value = saved.tripName;
                     }
                     
                     this.populateDropdowns();
@@ -876,6 +912,13 @@
                     
                     if (tabName === 'summary') this.updateSummary();
                     if (tabName === 'settlements') this.calculateSettlements();
+                    if (tabName === 'settings') {
+                        // Ensure trip name input is populated
+                        const tripInput = document.getElementById('trip-name-input');
+                        if (tripInput && !tripInput.value) {
+                            tripInput.value = this.tripName;
+                        }
+                    }
                 },
                 
                 populateDropdowns: function() {
@@ -905,6 +948,27 @@
                         this.renderNameInputs();
                         this.populateDropdowns();
                         alert('✓ Traveler added! Click "Save Names" to sync with everyone.');
+                    }
+                },
+                
+                updateTripNameDisplay: function() {
+                    const display = document.getElementById('trip-name-display');
+                    if (display) display.textContent = this.tripName;
+                },
+                
+                saveTripName: async function() {
+                    const input = document.getElementById('trip-name-input');
+                    if (input) {
+                        const newName = input.value.trim();
+                        if (newName) {
+                            this.tripName = newName;
+                            this.updateTripNameDisplay();
+                            
+                            const success = await this.saveToFirebase('tripName', this.tripName);
+                            if (success) {
+                                alert('✓ Trip name saved and synced!');
+                            }
+                        }
                     }
                 },
                 
@@ -1384,7 +1448,7 @@
                 
                 copyToClipboard: function() {
                     const totalSpent = this.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-                    let text = `🇯🇵 JAPAN 2025 EXPENSES\n\n`;
+                    let text = `${this.tripName}\nEXPENSE SUMMARY\n\n`;
                     text += `Total: ₱${totalSpent.toFixed(2)}\n`;
                     text += `Per Person: ₱${(totalSpent / this.people.length).toFixed(2)}\n\n`;
                     
