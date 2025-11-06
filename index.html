@@ -561,8 +561,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🇯🇵 Japan 2025</h1>
-            <p>Expense Tracker</p>
+            <h1 id="trip-name-display">🌍 Expense Tracker</h1>
+            <p>Real-time collaborative tracking</p>
             <div class="sync-status">
                 <div class="sync-dot" id="sync-dot"></div>
                 <span id="sync-text">Connecting...</span>
@@ -629,7 +629,7 @@
         <div id="settlements-tab" class="tab-content">
             <div class="summary-card">
                 <h3>💸 Pending Settlements</h3>
-                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Payments consolidated per person</p>
+                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Consolidated payments - tracks what's already been paid</p>
                 
                 <div id="settlement-plan"></div>
             </div>
@@ -811,6 +811,7 @@
                         const data = snapshot.val();
                         self.paymentHistory = data ? Object.values(data) : [];
                         self.renderPaymentHistory();
+                        self.calculateSettlements();
                     });
                     
                     database.ref('people').on('value', (snapshot) => {
@@ -1107,19 +1108,13 @@
                     // Remove from history
                     this.paymentHistory = this.paymentHistory.filter(p => p.id !== paymentId);
                     
-                    // Remove from payments list
-                    const settlementId = `${payment.from}→${payment.to}`;
-                    this.payments = this.payments.filter(id => id !== settlementId);
-                    
-                    // Save both
+                    // Save
                     if (isFirebaseConfigured) {
                         const historyObj = {};
                         this.paymentHistory.forEach(p => historyObj[p.id] = p);
                         await database.ref('paymentHistory').set(historyObj);
-                        await this.saveToFirebase('payments', this.payments);
                     } else {
                         await this.saveToFirebase('paymentHistory', this.paymentHistory);
-                        await this.saveToFirebase('payments', this.payments);
                         this.renderPaymentHistory();
                         this.calculateSettlements();
                     }
@@ -1225,47 +1220,37 @@
                 },
                 
                 calculateSettlements: function() {
-                    const balances = {};
-                    this.people.forEach(person => balances[person] = 0);
+                    // Calculate consolidated debts between each pair
+                    const netDebts = {};
                     
                     this.expenses.forEach(exp => {
-                        balances[exp.paidBy] += exp.amount;
                         const perPerson = exp.amount / exp.splitBetween.length;
+                        
                         exp.splitBetween.forEach(person => {
-                            balances[person] -= perPerson;
+                            if (person !== exp.paidBy) {
+                                const key = `${person}→${exp.paidBy}`;
+                                netDebts[key] = (netDebts[key] || 0) + perPerson;
+                            }
                         });
                     });
                     
-                    // Calculate consolidated debts between each pair
-                    const settlements = [];
-                    
-                    this.people.forEach(debtor => {
-                        this.people.forEach(creditor => {
-                            if (debtor === creditor) return;
-                            
-                            let netDebt = 0;
-                            
-                            this.expenses.forEach(exp => {
-                                if (exp.paidBy === creditor && exp.splitBetween.includes(debtor)) {
-                                    netDebt += exp.amount / exp.splitBetween.length;
-                                }
-                                if (exp.paidBy === debtor && exp.splitBetween.includes(creditor)) {
-                                    netDebt -= exp.amount / exp.splitBetween.length;
-                                }
-                            });
-                            
-                            if (netDebt > 0.01) {
-                                const settlementId = `${debtor}→${creditor}`;
-                                // Only show if not already paid
-                                if (!this.payments.includes(settlementId)) {
-                                    settlements.push({
-                                        from: debtor,
-                                        to: creditor,
-                                        amount: netDebt
-                                    });
-                                }
+                    // Now subtract any payments already made
+                    this.paymentHistory.forEach(payment => {
+                        const key = `${payment.from}→${payment.to}`;
+                        if (netDebts[key]) {
+                            netDebts[key] -= payment.amount;
+                            if (netDebts[key] < 0.01) {
+                                delete netDebts[key];
                             }
-                        });
+                        }
+                    });
+                    
+                    const settlements = [];
+                    Object.entries(netDebts).forEach(([key, amount]) => {
+                        if (amount > 0.01) {
+                            const [from, to] = key.split('→');
+                            settlements.push({ from, to, amount });
+                        }
                     });
                     
                     const self = this;
@@ -1276,23 +1261,68 @@
                         return;
                     }
                     
-                    container.innerHTML = settlements.map(s => `
-                        <div class="settlement-item">
-                            <div class="settlement-info">
-                                <div class="settlement-text"><strong>${s.from}</strong> pays <strong>${s.to}</strong></div>
-                                <div class="settlement-amount">₱${s.amount.toFixed(2)}</div>
-                            </div>
-                            <div class="settlement-actions">
-                                <button class="btn btn-success" data-pay-from="${s.from}" data-pay-to="${s.to}" data-pay-amount="${s.amount}">✓ Mark as Paid</button>
-                            </div>
-                        </div>
-                    `).join('');
+                    // Group by person owing
+                    const grouped = {};
+                    settlements.forEach(s => {
+                        if (!grouped[s.from]) grouped[s.from] = [];
+                        grouped[s.from].push(s);
+                    });
+                    
+                    let html = '';
+                    Object.entries(grouped).forEach(([person, debts]) => {
+                        html += `<div style="margin-bottom: 24px;">`;
+                        html += `<h4 style="color: #667eea; margin-bottom: 12px; font-size: 16px;">${person}'s Payments:</h4>`;
+                        
+                        debts.forEach(s => {
+                            html += `
+                                <div class="settlement-item">
+                                    <div class="settlement-info">
+                                        <div class="settlement-text">
+                                            Pay <strong>${s.to}</strong>
+                                        </div>
+                                        <div class="settlement-amount">₱${s.amount.toFixed(2)}</div>
+                                    </div>
+                                    <div class="settlement-actions">
+                                        <button class="btn btn-success" data-pay-from="${s.from}" data-pay-to="${s.to}" data-pay-amount="${s.amount}">✓ Mark as Paid</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        html += `</div>`;
+                    });
+                    
+                    container.innerHTML = html;
                     
                     container.querySelectorAll('[data-pay-from]').forEach(btn => {
                         btn.addEventListener('click', function() {
                             self.markAsPaid(this.dataset.payFrom, this.dataset.payTo, parseFloat(this.dataset.payAmount));
                         });
                     });
+                },
+                
+                markAsPaid: async function(from, to, amount) {
+                    // Add to payment history
+                    const payment = {
+                        id: Date.now(),
+                        from: from,
+                        to: to,
+                        amount: amount,
+                        date: new Date().toISOString()
+                    };
+                    
+                    this.paymentHistory.push(payment);
+                    
+                    // Save payment history
+                    if (isFirebaseConfigured) {
+                        const historyObj = {};
+                        this.paymentHistory.forEach(p => historyObj[p.id] = p);
+                        await database.ref('paymentHistory').set(historyObj);
+                    } else {
+                        await this.saveToFirebase('paymentHistory', this.paymentHistory);
+                        this.renderPaymentHistory();
+                        this.calculateSettlements();
+                    }
                 },
                 
                 resetAllData: async function() {
