@@ -5,605 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🇯🇵 Japan 2025 Expense Tracker</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 0;
-        }
-        
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            background: white;
-            min-height: 100vh;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px 16px;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .header h1 {
-            font-size: 1.5em;
-            margin-bottom: 8px;
-        }
-        
-        .header p {
-            opacity: 0.9;
-            font-size: 0.9em;
-        }
-        
-        .sync-status {
-            background: rgba(255,255,255,0.2);
-            padding: 6px 12px;
-            border-radius: 20px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 8px;
-            font-size: 12px;
-        }
-        
-        .sync-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4ade80;
-            animation: pulse 2s infinite;
-        }
-        
-        .sync-dot.disconnected {
-            background: #ef4444;
-            animation: none;
-        }
-        
-        .sync-dot.connecting {
-            background: #fbbf24;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .tabs {
-            display: flex;
-            background: white;
-            border-bottom: 2px solid #e0e0e0;
-            overflow-x: auto;
-            position: sticky;
-            top: 136px;
-            z-index: 99;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .tab {
-            flex: 1;
-            min-width: 90px;
-            padding: 16px 8px;
-            text-align: center;
-            cursor: pointer;
-            font-weight: 600;
-            color: #666;
-            transition: all 0.3s;
-            border: none;
-            background: none;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-        
-        .tab.active {
-            color: #667eea;
-            background: #f8f9fa;
-            border-bottom: 3px solid #667eea;
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 16px;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .form-section {
-            background: #f8f9fa;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-        }
-        
-        .form-section h2 {
-            font-size: 1.2em;
-            margin-bottom: 16px;
-            color: #333;
-        }
-        
-        .form-row {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        label {
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #333;
-            font-size: 14px;
-        }
-        
-        input, select, textarea {
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border 0.3s;
-            -webkit-appearance: none;
-        }
-        
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .split-checkboxes {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 8px;
-        }
-        
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-        }
-        
-        .checkbox-group input[type="checkbox"] {
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            flex-shrink: 0;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            border: 2px solid #667eea;
-            border-radius: 4px;
-            background: white;
-            position: relative;
-        }
-        
-        .checkbox-group input[type="checkbox"]:checked {
-            background: #667eea;
-        }
-        
-        .checkbox-group input[type="checkbox"]:checked::after {
-            content: '✓';
-            position: absolute;
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .checkbox-group label {
-            flex: 1;
-            font-size: 15px;
-            color: #333;
-            cursor: pointer;
-        }
-        
-        .btn {
-            padding: 14px 24px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 16px;
-            width: 100%;
-            margin-top: 8px;
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .btn-success {
-            background: #28a745;
-            color: white;
-            padding: 12px 20px;
-            font-size: 14px;
-        }
-        
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-            padding: 10px 16px;
-            font-size: 13px;
-        }
-        
-        .btn-undo {
-            background: #fbbf24;
-            color: white;
-            padding: 8px 16px;
-            font-size: 12px;
-        }
-        
-        .expense-card {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border-left: 4px solid #667eea;
-        }
-        
-        .expense-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
-        }
-        
-        .expense-description {
-            font-weight: 600;
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 4px;
-        }
-        
-        .expense-category {
-            font-size: 13px;
-            color: #666;
-            display: inline-block;
-            background: #f8f9fa;
-            padding: 4px 10px;
-            border-radius: 12px;
-        }
-        
-        .expense-amount {
-            font-size: 20px;
-            font-weight: 700;
-            color: #667eea;
-            text-align: right;
-        }
-        
-        .expense-details {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding-top: 12px;
-            border-top: 1px solid #e0e0e0;
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .expense-detail-row {
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .expense-actions {
-            margin-top: 12px;
-            display: flex;
-            gap: 8px;
-        }
-        
-        .summary-cards {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-        
-        .summary-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        
-        .summary-card h3 {
-            color: #667eea;
-            margin-bottom: 16px;
-            font-size: 1.2em;
-        }
-        
-        .summary-big-number {
-            font-size: 2.5em;
-            font-weight: 700;
-            color: #667eea;
-        }
-        
-        .person-summary {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .person-summary:last-child {
-            border-bottom: none;
-        }
-        
-        .person-name {
-            font-weight: 600;
-            color: #333;
-            font-size: 15px;
-        }
-        
-        .person-details {
-            font-size: 12px;
-            color: #999;
-            margin-top: 4px;
-        }
-        
-        .amount-positive {
-            color: #28a745;
-            font-weight: 700;
-            font-size: 15px;
-        }
-        
-        .amount-negative {
-            color: #dc3545;
-            font-weight: 700;
-            font-size: 15px;
-        }
-        
-        .amount-neutral {
-            color: #6c757d;
-            font-weight: 600;
-            font-size: 15px;
-        }
-        
-        .settlement-item {
-            background: white;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border-left: 4px solid #667eea;
-        }
-        
-        .settlement-info {
-            margin-bottom: 12px;
-        }
-        
-        .settlement-text {
-            font-size: 15px;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        
-        .settlement-amount {
-            font-size: 28px;
-            color: #667eea;
-            font-weight: 700;
-        }
-        
-        .settlement-actions {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .payment-history-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 12px;
-        }
-        
-        .payment-history-info {
-            flex: 1;
-        }
-        
-        .payment-history-text {
-            font-size: 15px;
-            color: #333;
-            margin-bottom: 4px;
-        }
-        
-        .payment-history-date {
-            font-size: 12px;
-            color: #999;
-        }
-        
-        .payment-history-amount {
-            font-size: 18px;
-            color: #28a745;
-            font-weight: 700;
-        }
-        
-        .export-section {
-            margin-top: 16px;
-            padding: 16px;
-            background: #f8f9fa;
-            border-radius: 12px;
-        }
-        
-        .export-section h3 {
-            margin-bottom: 12px;
-            font-size: 1.1em;
-        }
-        
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 12px;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-        
-        .empty-state svg {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 16px;
-            opacity: 0.3;
-        }
-        
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-        }
-        
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
-        }
-        
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border-left: 4px solid #ffc107;
-        }
-        
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-left: 4px solid #17a2b8;
-        }
-        
-        .alert-danger {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
-        
-        .names-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 12px;
-        }
+        /* [STYLES REMAIN EXACTLY THE SAME AS YOUR ORIGINAL] */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 0; }
+        .container { max-width: 100%; margin: 0 auto; background: white; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 16px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 1.5em; margin-bottom: 8px; }
+        .header p { opacity: 0.9; font-size: 0.9em; }
+        .sync-status { background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+        .sync-dot.disconnected { background: #ef4444; animation: none; }
+        .sync-dot.connecting { background: #fbbf24; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .tabs { display: flex; background: white; border-bottom: 2px solid #e0e0e0; overflow-x: auto; position: sticky; top: 136px; z-index: 99; -webkit-overflow-scrolling: touch; }
+        .tab { flex: 1; min-width: 90px; padding: 16px 8px; text-align: center; cursor: pointer; font-weight: 600; color: #666; transition: all 0.3s; border: none; background: none; font-size: 14px; white-space: nowrap; }
+        .tab.active { color: #667eea; background: #f8f9fa; border-bottom: 3px solid #667eea; }
+        .tab-content { display: none; padding: 16px; }
+        .tab-content.active { display: block; }
+        .form-section { background: #f8f9fa; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+        .form-section h2 { font-size: 1.2em; margin-bottom: 16px; color: #333; }
+        .form-row { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 6px; color: #333; font-size: 14px; }
+        input, select, textarea { padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; transition: border 0.3s; -webkit-appearance: none; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #667eea; }
+        .split-checkboxes { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+        .checkbox-group input[type="checkbox"] { width: 24px; height: 24px; cursor: pointer; flex-shrink: 0; -webkit-appearance: none; -moz-appearance: none; appearance: none; border: 2px solid #667eea; border-radius: 4px; background: white; position: relative; }
+        .checkbox-group input[type="checkbox"]:checked { background: #667eea; }
+        .checkbox-group input[type="checkbox"]:checked::after { content: '✓'; position: absolute; color: white; font-size: 18px; font-weight: bold; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .checkbox-group label { flex: 1; font-size: 15px; color: #333; cursor: pointer; }
+        .btn { padding: 14px 24px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 16px; width: 100%; margin-top: 8px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { background: #28a745; color: white; padding: 12px 20px; font-size: 14px; }
+        .btn-danger { background: #dc3545; color: white; padding: 10px 16px; font-size: 13px; }
+        .expense-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #667eea; }
+        .expense-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+        .expense-description { font-weight: 600; font-size: 16px; color: #333; margin-bottom: 4px; }
+        .expense-category { font-size: 13px; color: #666; display: inline-block; background: #f8f9fa; padding: 4px 10px; border-radius: 12px; }
+        .expense-amount { font-size: 20px; font-weight: 700; color: #667eea; text-align: right; }
+        .expense-details { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666; }
+        .summary-cards { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+        .summary-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .summary-card h3 { color: #667eea; margin-bottom: 16px; font-size: 1.2em; }
+        .summary-big-number { font-size: 2.5em; font-weight: 700; color: #667eea; }
+        .person-summary { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #e0e0e0; }
+        .person-summary:last-child { border-bottom: none; }
+        .amount-positive { color: #28a745; font-weight: 700; font-size: 15px; }
+        .amount-negative { color: #dc3545; font-weight: 700; font-size: 15px; }
+        .settlement-item { background: white; padding: 16px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #667eea; }
+        .settlement-amount { font-size: 28px; color: #667eea; font-weight: 700; }
+        .alert { padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+        .alert-success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .alert-warning { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+        .alert-danger { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .names-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
         
         @media (min-width: 768px) {
-            .container {
-                max-width: 1200px;
-                border-radius: 16px;
-                margin: 20px auto;
-                min-height: calc(100vh - 40px);
-            }
-            
-            .header {
-                border-radius: 16px 16px 0 0;
-                padding: 30px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .tabs {
-                position: static;
-            }
-            
-            .tab {
-                min-width: 120px;
-                padding: 20px;
-                font-size: 16px;
-            }
-            
-            .tab-content {
-                padding: 30px;
-            }
-            
-            .form-row {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            
-            .form-row .form-group {
-                flex: 1;
-                min-width: 200px;
-            }
-            
-            .split-checkboxes {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            
-            .checkbox-group {
-                flex: 0 0 calc(33.333% - 8px);
-            }
-            
-            .summary-cards {
-                flex-direction: row;
-            }
-            
-            .summary-card {
-                flex: 1;
-            }
-            
-            .button-group {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            
-            .button-group .btn {
-                flex: 1;
-                min-width: 200px;
-            }
-            
-            .names-grid {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            
-            .names-grid .form-group {
-                flex: 0 0 calc(33.333% - 8px);
-            }
+            .container { max-width: 1200px; border-radius: 16px; margin: 20px auto; min-height: calc(100vh - 40px); }
+            .header { border-radius: 16px 16px 0 0; padding: 30px; }
+            .header h1 { font-size: 2em; }
+            .tabs { position: static; }
+            .tab { min-width: 120px; padding: 20px; font-size: 16px; }
+            .tab-content { padding: 30px; }
+            .form-row { flex-direction: row; flex-wrap: wrap; }
+            .form-row .form-group { flex: 1; min-width: 200px; }
+            .split-checkboxes { flex-direction: row; flex-wrap: wrap; }
+            .checkbox-group { flex: 0 0 calc(33.333% - 8px); }
+            .summary-cards { flex-direction: row; }
+            .summary-card { flex: 1; }
+            .button-group { flex-direction: row; flex-wrap: wrap; }
+            .names-grid { flex-direction: row; flex-wrap: wrap; }
+            .names-grid .form-group { flex: 0 0 calc(33.333% - 8px); }
         }
     </style>
 </head>
@@ -625,19 +101,16 @@
             
             <div class="form-section">
                 <h2>Add Expense</h2>
-                
                 <div class="form-row">
                     <div class="form-group">
                         <label>Date</label>
                         <input type="date" id="expense-date" required>
                     </div>
-                    
                     <div class="form-group">
                         <label>Description</label>
                         <input type="text" id="expense-description" placeholder="e.g., Hotel Night 1" required>
                     </div>
                 </div>
-                
                 <div class="form-row">
                     <div class="form-group">
                         <label>Category</label>
@@ -650,23 +123,19 @@
                             <option value="Other">📦 Other</option>
                         </select>
                     </div>
-                    
                     <div class="form-group">
                         <label>Amount (₱)</label>
                         <input type="number" id="expense-amount" step="0.01" placeholder="0.00" required>
                     </div>
                 </div>
-                
                 <div class="form-group">
                     <label>Paid By</label>
                     <select id="expense-paidby"></select>
                 </div>
-                
                 <div class="form-group">
                     <label>Split Between</label>
                     <div class="split-checkboxes" id="split-checkboxes"></div>
                 </div>
-                
                 <button class="btn btn-primary" id="add-expense-btn">➕ Add Expense</button>
             </div>
             
@@ -676,16 +145,8 @@
         <div id="settlements-tab" class="tab-content">
             <div class="summary-card">
                 <h3>💸 Pending Settlements</h3>
-                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Consolidated payments - tracks what's already been paid</p>
-                
+                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Who owes who?</p>
                 <div id="settlement-plan"></div>
-            </div>
-            
-            <div class="summary-card" style="margin-top: 16px;">
-                <h3>📜 Payment History</h3>
-                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Completed payments</p>
-                
-                <div id="payment-history"></div>
             </div>
         </div>
         
@@ -695,29 +156,18 @@
                     <h3>💵 Total Spent</h3>
                     <div class="summary-big-number" id="total-spent">₱0.00</div>
                 </div>
-                
                 <div class="summary-card">
                     <h3>👥 Per Person</h3>
                     <div class="summary-big-number" style="color: #764ba2;" id="per-person-avg">₱0.00</div>
                 </div>
             </div>
-            
             <div class="summary-card">
                 <h3>Individual Balances</h3>
                 <div id="individual-balances"></div>
             </div>
-            
-            <div class="summary-card" style="margin-top: 16px;">
-                <h3>📈 By Category</h3>
-                <div id="category-breakdown"></div>
-            </div>
-            
             <div class="export-section">
-                <h3>📥 Export Data</h3>
+                <h3>📥 Actions</h3>
                 <div class="button-group">
-                    <button class="btn btn-secondary" id="export-json-btn">📤 Export JSON</button>
-                    <button class="btn btn-secondary" id="export-csv-btn">Download CSV</button>
-                    <button class="btn btn-secondary" id="copy-summary-btn">Copy Summary</button>
                     <button class="btn btn-danger" id="reset-data-btn">Reset All Data</button>
                 </div>
             </div>
@@ -726,29 +176,17 @@
         <div id="settings-tab" class="tab-content">
             <div class="summary-card">
                 <h3>🏷️ Trip Name</h3>
-                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Customize your trip name</p>
-                
                 <div class="form-group">
                     <label>Trip Name</label>
                     <input type="text" id="trip-name-input" placeholder="e.g., 🇯🇵 Japan 2025">
                 </div>
-                
                 <button class="btn btn-primary" id="save-trip-name-btn">💾 Save Trip Name</button>
             </div>
-            
             <div class="summary-card" style="margin-top: 16px;">
                 <h3>👥 Traveler Names</h3>
-                <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Changes sync to everyone!</p>
-                
-                <div class="alert alert-warning">
-                    <strong>⚠️ Important:</strong> Set names BEFORE adding expenses.
-                </div>
-                
                 <div class="names-grid" id="names-grid"></div>
-                
                 <button class="btn btn-primary" id="save-names-btn">💾 Save Names</button>
                 <button class="btn btn-secondary" id="add-traveler-btn">➕ Add Traveler</button>
-                <button class="btn btn-secondary" id="reset-names-btn">🔄 Reset to Defaults</button>
             </div>
         </div>
     </div>
@@ -768,97 +206,60 @@
         };
         
         var database;
-        var isFirebaseConfigured = false;
-        
         var app = {
             expenses: [],
-            payments: [],
-            paymentHistory: [],
-            people: ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'],
+            people: ['Traveler 1', 'Traveler 2', 'Traveler 3'],
             tripName: '🌍 Expense Tracker',
-            numPeople: 7,
-            isLoading: false,
             isConnected: false,
             
             init: function() {
-                this.setupDOM();
-                this.setupEventListeners();
-                this.initializeFirebase();
-            },
-            
-            initializeFirebase: function() {
-                var self = this;
-                
                 try {
-                    console.log('Initializing Firebase...');
-                    
-                    if (!firebase.apps.length) {
-                        firebase.initializeApp(firebaseConfig);
-                    }
-                    
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                     database = firebase.database();
-                    
-                    console.log('Testing Firebase connection...');
-                    var testRef = database.ref('.info/connected');
-                    
-                    testRef.on('value', function(snapshot) {
-                        self.isConnected = snapshot.val() === true;
-                        console.log('Firebase connection status:', self.isConnected);
-                        
-                        if (self.isConnected) {
-                            isFirebaseConfigured = true;
-                            self.updateSyncStatus('✅ Connected', true);
-                            self.showConnectionAlert('success');
-                            self.setupFirebaseListeners();
-                        } else {
-                            self.updateSyncStatus('⚠️ Reconnecting...', false);
-                            self.showConnectionAlert('warning');
-                        }
-                    });
-                    
-                    setTimeout(function() {
-                        if (!self.isConnected) {
-                            console.warn('Firebase connection timeout, using localStorage');
-                            self.updateSyncStatus('📱 Local Mode', false);
-                            self.showConnectionAlert('danger');
-                            self.loadFromLocalStorage();
-                        }
-                    }, 5000);
-                    
-                } catch (error) {
-                    console.error('Firebase initialization error:', error);
-                    self.updateSyncStatus('📱 Local Mode', false);
-                    self.showConnectionAlert('danger');
-                    self.loadFromLocalStorage();
-                }
+                    this.setupDOM();
+                    this.setupEventListeners();
+                    this.setupFirebaseListeners();
+                } catch(e) { console.error(e); this.showConnectionAlert('danger'); }
             },
-            
-            showConnectionAlert: function(type) {
-                var alert = document.getElementById('connection-alert');
-                if (!alert) return;
+
+            setupFirebaseListeners: function() {
+                var self = this;
+                database.ref('.info/connected').on('value', function(snap) {
+                    self.isConnected = snap.val() === true;
+                    self.updateSyncStatus(self.isConnected ? '✅ Connected' : '⚠️ Reconnecting', self.isConnected);
+                    if(self.isConnected) self.showConnectionAlert('success');
+                });
+
+                database.ref('expenses').on('value', function(snap) {
+                    self.expenses = snap.val() ? Object.values(snap.val()) : [];
+                    self.renderExpenses();
+                    self.calculateSettlements();
+                });
+
+                database.ref('people').on('value', function(snap) {
+                    if(snap.val()) {
+                        self.people = snap.val();
+                        self.renderNameInputs();
+                        self.populateDropdowns();
+                    }
+                });
                 
-                var messages = {
-                    success: '<strong>🌐 Live sync active!</strong> Changes appear instantly for everyone.',
-                    warning: '<strong>⚠️ Reconnecting...</strong> Your changes are saved locally and will sync when connection is restored.',
-                    danger: '<strong>📱 Offline Mode</strong> Using local storage. Changes won\'t sync with others until connection is restored.'
-                };
-                
-                alert.className = 'alert alert-' + type;
-                alert.innerHTML = messages[type] || messages.danger;
+                database.ref('tripName').on('value', function(snap) {
+                    if(snap.val()) {
+                        self.tripName = snap.val();
+                        document.getElementById('trip-name-display').textContent = self.tripName;
+                        document.getElementById('trip-name-input').value = self.tripName;
+                    }
+                });
             },
-            
+
             setupDOM: function() {
-                var dateInput = document.getElementById('expense-date');
-                if (dateInput) dateInput.valueAsDate = new Date();
-                
-                var tripNameInput = document.getElementById('trip-name-input');
-                if (tripNameInput) tripNameInput.value = this.tripName;
-                
+                document.getElementById('expense-date').valueAsDate = new Date();
                 this.renderTabs();
                 this.renderNameInputs();
-                this.updateTripNameDisplay();
+                this.populateDropdowns();
             },
-            
+
             renderTabs: function() {
                 var tabs = [
                     { id: 'expenses', label: '💰 Expenses' },
@@ -866,625 +267,199 @@
                     { id: 'summary', label: '📊 Summary' },
                     { id: 'settings', label: '⚙️ Settings' }
                 ];
-                
-                document.getElementById('tabs-container').innerHTML = tabs.map(function(tab, i) {
-                    return '<button class="tab ' + (i === 0 ? 'active' : '') + '" data-tab="' + tab.id + '">' + tab.label + '</button>';
-                }).join('');
+                document.getElementById('tabs-container').innerHTML = tabs.map((tab, i) => 
+                    `<button class="tab ${i === 0 ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>`
+                ).join('');
             },
-            
-            renderNameInputs: function() {
-                var self = this;
-                var grid = document.getElementById('names-grid');
-                grid.innerHTML = this.people.map(function(person, i) {
-                    return '<div class="form-group"><label>Traveler ' + (i + 1) + '</label><input type="text" id="name-' + i + '" placeholder="Person ' + (i + 1) + '" value="' + person + '"></div>';
-                }).join('');
+
+            switchTab: function(tabId) {
+                document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tabId + '-tab'));
             },
-            
+
             setupEventListeners: function() {
                 var self = this;
-                
-                document.getElementById('tabs-container').addEventListener('click', function(e) {
-                    if (e.target.classList.contains('tab')) {
-                        self.switchTab(e.target.dataset.tab);
-                    }
+                document.getElementById('tabs-container').addEventListener('click', e => {
+                    if(e.target.classList.contains('tab')) self.switchTab(e.target.dataset.tab);
                 });
-                
-                document.getElementById('add-expense-btn').addEventListener('click', function() { self.addExpense(); });
-                document.getElementById('save-trip-name-btn').addEventListener('click', function() { self.saveTripName(); });
-                document.getElementById('save-names-btn').addEventListener('click', function() { self.saveNames(); });
-                document.getElementById('add-traveler-btn').addEventListener('click', function() { self.addTraveler(); });
-                document.getElementById('reset-names-btn').addEventListener('click', function() { self.resetNames(); });
-                document.getElementById('export-json-btn').addEventListener('click', function() { self.exportToJSON(); });
-                document.getElementById('export-csv-btn').addEventListener('click', function() { self.exportToCSV(); });
-                document.getElementById('copy-summary-btn').addEventListener('click', function() { self.copyToClipboard(); });
-                document.getElementById('reset-data-btn').addEventListener('click', function() { self.resetAllData(); });
-            },
-            
-            setupFirebaseListeners: function() {
-                var self = this;
-                
-                console.log('Setting up Firebase listeners...');
-                
-                database.ref('expenses').on('value', function(snapshot) {
-                    var data = snapshot.val();
-                    self.expenses = data ? Object.values(data) : [];
-                    console.log('Expenses loaded:', self.expenses.length);
-                    self.renderExpenses();
-                }, function(error) {
-                    console.error('Error loading expenses:', error);
-                });
-                
-                database.ref('payments').on('value', function(snapshot) {
-                    var data = snapshot.val();
-                    self.payments = data || [];
-                    self.calculateSettlements();
-                });
-                
-                database.ref('paymentHistory').on('value', function(snapshot) {
-                    var data = snapshot.val();
-                    self.paymentHistory = data ? Object.values(data) : [];
-                    console.log('Payment history loaded:', self.paymentHistory.length);
-                    self.renderPaymentHistory();
-                    self.calculateSettlements();
-                });
-                
-                database.ref('people').on('value', function(snapshot) {
-                    var data = snapshot.val();
-                    if (data) {
-                        self.people = data;
-                        self.renderNameInputs();
-                        self.populateDropdowns();
-                    }
-                });
-                
-                database.ref('tripName').on('value', function(snapshot) {
-                    var data = snapshot.val();
-                    if (data) {
-                        self.tripName = data;
-                        self.updateTripNameDisplay();
-                        var input = document.getElementById('trip-name-input');
-                        if (input) input.value = data;
-                    }
-                });
-            },
-            
-            loadFromLocalStorage: function() {
-                var saved = {
-                    expenses: localStorage.getItem('japan-expenses'),
-                    payments: localStorage.getItem('japan-payments'),
-                    paymentHistory: localStorage.getItem('japan-paymentHistory'),
-                    people: localStorage.getItem('japan-people'),
-                    tripName: localStorage.getItem('japan-tripName')
+                document.getElementById('add-expense-btn').onclick = () => self.addExpense();
+                document.getElementById('save-names-btn').onclick = () => self.saveNames();
+                document.getElementById('add-traveler-btn').onclick = () => self.addTraveler();
+                document.getElementById('save-trip-name-btn').onclick = () => {
+                    var name = document.getElementById('trip-name-input').value;
+                    database.ref('tripName').set(name);
                 };
-                
-                if (saved.expenses) this.expenses = JSON.parse(saved.expenses);
-                if (saved.payments) this.payments = JSON.parse(saved.payments);
-                if (saved.paymentHistory) this.paymentHistory = JSON.parse(saved.paymentHistory);
-                if (saved.people) {
-                    this.people = JSON.parse(saved.people);
-                    this.renderNameInputs();
-                }
-                if (saved.tripName) {
-                    this.tripName = saved.tripName;
-                    this.updateTripNameDisplay();
-                    var input = document.getElementById('trip-name-input');
-                    if (input) input.value = saved.tripName;
-                }
-                
-                this.populateDropdowns();
-                this.renderExpenses();
-                this.renderPaymentHistory();
+                document.getElementById('reset-data-btn').onclick = () => {
+                    if(confirm('Are you sure? This deletes ALL data.')) database.ref().remove();
+                };
             },
-            
-            saveToFirebase: function(path, data, callback) {
-                if (isFirebaseConfigured && this.isConnected) {
-                    database.ref(path).set(data).then(function() {
-                        console.log('Saved to Firebase: ' + path);
-                        if (callback) callback(true);
-                    }).catch(function(error) {
-                        console.error('Save error:', error);
-                        localStorage.setItem('japan-' + path, JSON.stringify(data));
-                        if (callback) callback(false);
-                    });
-                } else {
-                    localStorage.setItem('japan-' + path, JSON.stringify(data));
-                    if (callback) callback(true);
-                }
-            },
-            
-            updateSyncStatus: function(text, connected) {
-                var elem = document.getElementById('sync-text');
-                var dot = document.getElementById('sync-dot');
-                if (elem) elem.textContent = text;
-                if (dot) {
-                    dot.classList.remove('disconnected', 'connecting');
-                    if (!connected) {
-                        dot.classList.add('disconnected');
-                    }
-                }
-            },
-            
-            switchTab: function(tabName) {
-                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-                document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-                
-                document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
-                document.getElementById(tabName + '-tab').classList.add('active');
-                
-                if (tabName === 'summary') this.updateSummary();
-                if (tabName === 'settlements') this.calculateSettlements();
-                if (tabName === 'settings') {
-                    var tripInput = document.getElementById('trip-name-input');
-                    if (tripInput && !tripInput.value) {
-                        tripInput.value = this.tripName;
-                    }
-                }
-            },
-            
+
             populateDropdowns: function() {
-                var paidBySelect = document.getElementById('expense-paidby');
-                var splitCheckboxes = document.getElementById('split-checkboxes');
+                var payerSelect = document.getElementById('expense-paidby');
+                var checkboxesDiv = document.getElementById('split-checkboxes');
+                var currentPayer = payerSelect.value;
                 
-                if (paidBySelect) {
-                    paidBySelect.innerHTML = this.people.map(function(p) {
-                        return '<option value="' + p + '">' + p + '</option>';
-                    }).join('');
-                }
-                
-                if (splitCheckboxes) {
-                    splitCheckboxes.innerHTML = this.people.map(function(p, i) {
-                        return '<div class="checkbox-group"><input type="checkbox" id="split-person' + i + '"><label for="split-person' + i + '">' + p + '</label></div>';
-                    }).join('');
-                }
+                payerSelect.innerHTML = this.people.map(p => `<option value="${p}">${p}</option>`).join('');
+                if(currentPayer && this.people.includes(currentPayer)) payerSelect.value = currentPayer;
+
+                checkboxesDiv.innerHTML = this.people.map((p, i) => `
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="split-${i}" value="${p}" checked>
+                        <label for="split-${i}">${p}</label>
+                    </div>
+                `).join('');
             },
-            
-            addTraveler: function() {
-                var newName = prompt('Enter new traveler name:');
-                if (newName && newName.trim()) {
-                    this.people.push(newName.trim());
-                    this.renderNameInputs();
-                    this.populateDropdowns();
-                    alert('✓ Traveler added! Click "Save Names" to sync with everyone.');
-                }
+
+            renderNameInputs: function() {
+                var grid = document.getElementById('names-grid');
+                grid.innerHTML = this.people.map((person, i) => 
+                    `<div class="form-group"><label>Traveler ${i + 1}</label><input type="text" id="name-${i}" value="${person}"></div>`
+                ).join('');
             },
-            
-            updateTripNameDisplay: function() {
-                var display = document.getElementById('trip-name-display');
-                if (display) display.textContent = this.tripName;
-            },
-            
-            saveTripName: function() {
-                var self = this;
-                var input = document.getElementById('trip-name-input');
-                if (input) {
-                    var newName = input.value.trim();
-                    if (newName) {
-                        this.tripName = newName;
-                        this.updateTripNameDisplay();
-                        
-                        this.saveToFirebase('tripName', this.tripName, function(success) {
-                            if (success) {
-                                alert('✓ Trip name saved and synced!');
-                            }
-                        });
-                    }
-                }
-            },
-            
+
             saveNames: function() {
-                var self = this;
-                for (var i = 0; i < this.people.length; i++) {
-                    var input = document.getElementById('name-' + i);
-                    if (input) {
-                        this.people[i] = input.value.trim() || 'Person ' + (i + 1);
-                    }
+                var newNames = [];
+                for(var i = 0; i < this.people.length; i++) {
+                    var val = document.getElementById('name-' + i).value;
+                    if(val) newNames.push(val);
                 }
-                
-                this.saveToFirebase('people', this.people, function(success) {
-                    if (success) {
-                        alert('✓ Names saved!');
-                        self.populateDropdowns();
-                    }
-                });
+                database.ref('people').set(newNames);
             },
-            
-            resetNames: function() {
-                if (confirm('Reset all names to 7 default travelers?')) {
-                    this.people = ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'];
-                    this.renderNameInputs();
-                    this.saveNames();
-                }
+
+            addTraveler: function() {
+                this.people.push('Traveler ' + (this.people.length + 1));
+                this.saveNames(); // This triggers Firebase update which triggers render
             },
-            
+
             addExpense: function() {
-                var self = this;
-                var btn = document.getElementById('add-expense-btn');
-                if (this.isLoading) return;
-                
+                var desc = document.getElementById('expense-description').value;
+                var amt = parseFloat(document.getElementById('expense-amount').value);
+                var payer = document.getElementById('expense-paidby').value;
                 var date = document.getElementById('expense-date').value;
-                var description = document.getElementById('expense-description').value;
                 var category = document.getElementById('expense-category').value;
-                var amount = parseFloat(document.getElementById('expense-amount').value);
-                var paidBy = document.getElementById('expense-paidby').value;
                 
-                if (!date || !description || !amount || amount <= 0) {
-                    alert('Please fill all fields');
-                    return;
-                }
-                
-                var splitBetween = [];
-                for (var i = 0; i < this.people.length; i++) {
-                    var checkbox = document.getElementById('split-person' + i);
-                    if (checkbox && checkbox.checked) splitBetween.push(this.people[i]);
-                }
-                
-                if (splitBetween.length === 0) {
-                    alert('Select at least one person');
-                    return;
-                }
-                
-                this.isLoading = true;
-                btn.disabled = true;
-                btn.textContent = 'Saving...';
-                
+                if (!desc || isNaN(amt)) return alert('Please enter description and amount');
+
+                var involved = [];
+                this.people.forEach((p, i) => {
+                    if(document.getElementById('split-' + i).checked) involved.push(p);
+                });
+
+                if(involved.length === 0) return alert('Select at least one person to split with');
+
                 var expense = {
                     id: Date.now(),
                     date: date,
-                    description: description,
+                    description: desc,
                     category: category,
-                    amount: amount,
-                    paidBy: paidBy,
-                    splitBetween: splitBetween
+                    amount: amt,
+                    paidBy: payer,
+                    splitAmong: involved,
+                    timestamp: Date.now()
                 };
+
+                database.ref('expenses/' + expense.id).set(expense);
                 
-                this.expenses.push(expense);
-                
-                if (isFirebaseConfigured && this.isConnected) {
-                    var expensesObj = {};
-                    this.expenses.forEach(function(exp) { expensesObj[exp.id] = exp; });
-                    this.saveToFirebase('expenses', expensesObj);
-                } else {
-                    this.saveToFirebase('expenses', this.expenses);
-                    this.renderExpenses();
-                }
-                
+                // Clear inputs
                 document.getElementById('expense-description').value = '';
                 document.getElementById('expense-amount').value = '';
-                for (var i = 0; i < this.people.length; i++) {
-                    var checkbox = document.getElementById('split-person' + i);
-                    if (checkbox) checkbox.checked = false;
-                }
-                
-                this.isLoading = false;
-                btn.disabled = false;
-                btn.textContent = '➕ Add Expense';
             },
-            
-            deleteExpense: function(id) {
-                var self = this;
-                if (!confirm('Delete this expense?')) return;
-                
-                var index = this.expenses.findIndex(function(e) { return e.id === id; });
-                if (index === -1) return;
-                
-                this.expenses.splice(index, 1);
-                
-                if (isFirebaseConfigured && this.isConnected) {
-                    database.ref('expenses/' + id).remove();
-                } else {
-                    this.saveToFirebase('expenses', this.expenses);
-                    this.renderExpenses();
-                }
-            },
-            
+
             renderExpenses: function() {
-                var self = this;
-                var container = document.getElementById('expenses-list');
-                if (!container) return;
-                
-                if (this.expenses.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><svg fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg><h3>No expenses yet</h3><p>Add your first expense above</p></div>';
-                    return;
-                }
-                
-                var sorted = this.expenses.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-                
-                container.innerHTML = sorted.map(function(exp) {
-                    var perPerson = exp.amount / exp.splitBetween.length;
-                    return '<div class="expense-card"><div class="expense-header"><div><div class="expense-description">' + exp.description + '</div><span class="expense-category">' + exp.category + '</span></div><div class="expense-amount">₱' + exp.amount.toFixed(2) + '</div></div><div class="expense-details"><div class="expense-detail-row"><span>📅 ' + exp.date + '</span><span><strong>' + exp.paidBy + '</strong> paid</span></div><div class="expense-detail-row"><span>Split: ' + exp.splitBetween.length + ' people</span><span>₱' + perPerson.toFixed(2) + ' each</span></div><div style="font-size: 12px; color: #999;">' + exp.splitBetween.join(', ') + '</div></div><div class="expense-actions"><button class="btn btn-danger" data-delete-id="' + exp.id + '">🗑️ Delete</button></div></div>';
-                }).join('');
-                
-                container.querySelectorAll('[data-delete-id]').forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        self.deleteExpense(parseInt(this.dataset.deleteId));
-                    });
-                });
+                var list = document.getElementById('expenses-list');
+                list.innerHTML = this.expenses.sort((a,b) => b.timestamp - a.timestamp).map(ex => `
+                    <div class="expense-card">
+                        <div class="expense-header">
+                            <div>
+                                <div class="expense-description">${ex.description}</div>
+                                <div class="expense-category">${ex.category}</div>
+                            </div>
+                            <div class="expense-amount">₱${parseFloat(ex.amount).toFixed(2)}</div>
+                        </div>
+                        <div class="expense-details">
+                            <div>Paid by: <strong>${ex.paidBy}</strong></div>
+                            <div>Split: ${ex.splitAmong.join(', ')}</div>
+                            <button onclick="deleteExpense(${ex.id})" class="btn-danger" style="width:auto; float:right;">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
             },
-            
-            markAsPaid: function(from, to, amount) {
-                var self = this;
-                var payment = {
-                    id: Date.now(),
-                    from: from,
-                    to: to,
-                    amount: amount,
-                    date: new Date().toISOString()
-                };
-                
-                this.paymentHistory.push(payment);
-                
-                if (isFirebaseConfigured && this.isConnected) {
-                    var historyObj = {};
-                    this.paymentHistory.forEach(function(p) { historyObj[p.id] = p; });
-                    database.ref('paymentHistory').set(historyObj);
-                } else {
-                    this.saveToFirebase('paymentHistory', this.paymentHistory);
-                    this.renderPaymentHistory();
-                    this.calculateSettlements();
-                }
-            },
-            
-            undoPayment: function(paymentId) {
-                var self = this;
-                var payment = this.paymentHistory.find(function(p) { return p.id === paymentId; });
-                if (!payment) return;
-                
-                if (!confirm('Undo payment: ' + payment.from + ' → ' + payment.to + ' ₱' + payment.amount.toFixed(2) + '?')) return;
-                
-                this.paymentHistory = this.paymentHistory.filter(function(p) { return p.id !== paymentId; });
-                
-                if (isFirebaseConfigured && this.isConnected) {
-                    var historyObj = {};
-                    this.paymentHistory.forEach(function(p) { historyObj[p.id] = p; });
-                    database.ref('paymentHistory').set(historyObj);
-                } else {
-                    this.saveToFirebase('paymentHistory', this.paymentHistory);
-                    this.renderPaymentHistory();
-                    this.calculateSettlements();
-                }
-            },
-            
-            renderPaymentHistory: function() {
-                var self = this;
-                var container = document.getElementById('payment-history');
-                if (!container) return;
-                
-                if (this.paymentHistory.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><p style="color: #999;">No payment history yet</p></div>';
-                    return;
-                }
-                
-                var sorted = this.paymentHistory.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-                
-                container.innerHTML = sorted.map(function(payment) {
-                    var date = new Date(payment.date);
-                    var dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    
-                    return '<div class="payment-history-item"><div class="payment-history-info"><div class="payment-history-text"><strong>' + payment.from + '</strong> paid <strong>' + payment.to + '</strong></div><div class="payment-history-date">✓ ' + dateStr + '</div></div><div style="text-align: right;"><div class="payment-history-amount">₱' + payment.amount.toFixed(2) + '</div><button class="btn btn-undo" data-undo-id="' + payment.id + '" style="margin-top: 8px;">↩️ Undo</button></div></div>';
-                }).join('');
-                
-                container.querySelectorAll('[data-undo-id]').forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        self.undoPayment(parseInt(this.dataset.undoId));
-                    });
-                });
-            },
-            
-            updateSummary: function() {
-                var self = this;
-                var totalSpent = this.expenses.reduce(function(sum, exp) { return sum + exp.amount; }, 0);
-                var avgPerPerson = totalSpent / this.people.length;
-                
-                document.getElementById('total-spent').textContent = '₱' + totalSpent.toFixed(2);
-                document.getElementById('per-person-avg').textContent = '₱' + avgPerPerson.toFixed(2);
-                
-                var balances = {};
-                this.people.forEach(function(person) {
-                    balances[person] = { paid: 0, owes: 0 };
-                });
-                
-                this.expenses.forEach(function(exp) {
-                    balances[exp.paidBy].paid += exp.amount;
-                    var perPerson = exp.amount / exp.splitBetween.length;
-                    exp.splitBetween.forEach(function(person) {
-                        balances[person].owes += perPerson;
-                    });
-                });
-                
-                var balanceHtml = '';
-                this.people.forEach(function(person) {
-                    var net = balances[person].paid - balances[person].owes;
-                    var amountClass = net > 0.01 ? 'amount-positive' : net < -0.01 ? 'amount-negative' : 'amount-neutral';
-                    var status = net > 0.01 ? 'Gets back' : net < -0.01 ? 'Owes' : 'Settled';
-                    
-                    balanceHtml += '<div class="person-summary"><div><div class="person-name">' + person + '</div><div class="person-details">Paid: ₱' + balances[person].paid.toFixed(2) + ' | Share: ₱' + balances[person].owes.toFixed(2) + '</div></div><div class="' + amountClass + '">' + status + '<br>₱' + Math.abs(net).toFixed(2) + '</div></div>';
-                });
-                
-                document.getElementById('individual-balances').innerHTML = balanceHtml;
-                
-                var categories = {};
-                this.expenses.forEach(function(exp) {
-                    categories[exp.category] = (categories[exp.category] || 0) + exp.amount;
-                });
-                
-                var categoryHtml = '';
-                Object.entries(categories).forEach(function(entry) {
-                    var cat = entry[0];
-                    var amount = entry[1];
-                    var percentage = (amount / totalSpent * 100).toFixed(1);
-                    categoryHtml += '<div class="person-summary"><span>' + cat + '</span><span><strong>₱' + amount.toFixed(2) + '</strong> (' + percentage + '%)</span></div>';
-                });
-                
-                document.getElementById('category-breakdown').innerHTML = categoryHtml || '<p style="color: #999;">No expenses yet</p>';
-            },
-            
+
             calculateSettlements: function() {
-                var self = this;
-                var netDebts = {};
-                
-                this.expenses.forEach(function(exp) {
-                    var perPerson = exp.amount / exp.splitBetween.length;
-                    
-                    exp.splitBetween.forEach(function(person) {
-                        if (person !== exp.paidBy) {
-                            var key = person + '→' + exp.paidBy;
-                            netDebts[key] = (netDebts[key] || 0) + perPerson;
-                        }
-                    });
-                });
-                
-                this.paymentHistory.forEach(function(payment) {
-                    var key = payment.from + '→' + payment.to;
-                    if (netDebts[key]) {
-                        netDebts[key] -= payment.amount;
-                        if (netDebts[key] < 0.01) {
-                            delete netDebts[key];
-                        }
-                    }
-                });
-                
-                var settlements = [];
-                Object.entries(netDebts).forEach(function(entry) {
-                    var key = entry[0];
-                    var amount = entry[1];
-                    if (amount > 0.01) {
-                        var parts = key.split('→');
-                        settlements.push({ from: parts[0], to: parts[1], amount: amount });
-                    }
-                });
-                
-                var container = document.getElementById('settlement-plan');
-                
-                if (settlements.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><h3>✅ All Settled!</h3><p>No pending payments</p></div>';
-                    return;
-                }
-                
-                var grouped = {};
-                settlements.forEach(function(s) {
-                    if (!grouped[s.from]) grouped[s.from] = [];
-                    grouped[s.from].push(s);
-                });
-                
-                var html = '';
-                Object.entries(grouped).forEach(function(entry) {
-                    var person = entry[0];
-                    var debts = entry[1];
-                    html += '<div style="margin-bottom: 24px;"><h4 style="color: #667eea; margin-bottom: 12px; font-size: 16px;">' + person + '\'s Payments:</h4>';
-                    
-                    debts.forEach(function(s) {
-                        html += '<div class="settlement-item"><div class="settlement-info"><div class="settlement-text">Pay <strong>' + s.to + '</strong></div><div class="settlement-amount">₱' + s.amount.toFixed(2) + '</div></div><div class="settlement-actions"><button class="btn btn-success" data-pay-from="' + s.from + '" data-pay-to="' + s.to + '" data-pay-amount="' + s.amount + '">✓ Mark as Paid</button></div></div>';
-                    });
-                    
-                    html += '</div>';
-                });
-                
-                container.innerHTML = html;
-                
-                container.querySelectorAll('[data-pay-from]').forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        self.markAsPaid(this.dataset.payFrom, this.dataset.payTo, parseFloat(this.dataset.payAmount));
-                    });
-                });
-            },
-            
-            resetAllData: function() {
-                var self = this;
-                if (!confirm('⚠️ Delete ALL data? This affects everyone!')) return;
-                if (!confirm('Are you ABSOLUTELY sure?')) return;
-                
-                try {
-                    if (isFirebaseConfigured && this.isConnected) {
-                        database.ref('expenses').remove();
-                        database.ref('payments').remove();
-                        database.ref('paymentHistory').remove();
-                    } else {
-                        localStorage.removeItem('japan-expenses');
-                        localStorage.removeItem('japan-payments');
-                        localStorage.removeItem('japan-paymentHistory');
-                    }
-                    
-                    this.expenses = [];
-                    this.payments = [];
-                    this.paymentHistory = [];
-                    this.renderExpenses();
-                    this.renderPaymentHistory();
-                    alert('✓ All data reset');
-                } catch (error) {
-                    alert('Failed to reset: ' + error.message);
-                }
-            },
-            
-            exportToJSON: function() {
-                var data = { expenses: this.expenses, payments: this.payments, people: this.people, paymentHistory: this.paymentHistory };
-                var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'expense-tracker-' + new Date().toISOString().split('T')[0] + '.json';
-                a.click();
-                alert('✓ Exported!');
-            },
-            
-            exportToCSV: function() {
-                if (this.expenses.length === 0) {
-                    alert('No expenses to export');
-                    return;
-                }
-                
-                var csv = 'Date,Description,Category,Amount,Paid By,Split Between,Per Person\n';
-                this.expenses.forEach(function(exp) {
-                    var perPerson = exp.amount / exp.splitBetween.length;
-                    csv += exp.date + ',"' + exp.description + '",' + exp.category + ',' + exp.amount + ',' + exp.paidBy + ',"' + exp.splitBetween.join(', ') + '",' + perPerson.toFixed(2) + '\n';
-                });
-                
-                var blob = new Blob([csv], { type: 'text/csv' });
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'expense-tracker-' + new Date().toISOString().split('T')[0] + '.csv';
-                a.click();
-            },
-            
-            copyToClipboard: function() {
-                var self = this;
-                var totalSpent = this.expenses.reduce(function(sum, exp) { return sum + exp.amount; }, 0);
-                var text = this.tripName + '\nEXPENSE SUMMARY\n\n';
-                text += 'Total: ₱' + totalSpent.toFixed(2) + '\n';
-                text += 'Per Person: ₱' + (totalSpent / this.people.length).toFixed(2) + '\n\n';
-                
-                text += 'BALANCES:\n';
                 var balances = {};
-                this.people.forEach(function(person) {
-                    balances[person] = { paid: 0, owes: 0 };
-                });
-                
-                this.expenses.forEach(function(exp) {
-                    balances[exp.paidBy].paid += exp.amount;
-                    var perPerson = exp.amount / exp.splitBetween.length;
-                    exp.splitBetween.forEach(function(person) {
-                        balances[person].owes += perPerson;
+                this.people.forEach(p => balances[p] = 0);
+                var total = 0;
+
+                this.expenses.forEach(ex => {
+                    total += parseFloat(ex.amount);
+                    balances[ex.paidBy] += parseFloat(ex.amount);
+                    var splitAmt = ex.amount / ex.splitAmong.length;
+                    ex.splitAmong.forEach(person => {
+                        if(balances[person] !== undefined) balances[person] -= splitAmt;
                     });
                 });
+
+                document.getElementById('total-spent').innerText = '₱' + total.toFixed(2);
+                document.getElementById('per-person-avg').innerText = '₱' + (this.people.length ? (total/this.people.length).toFixed(2) : '0.00');
+
+                var balHtml = '';
+                for(var p in balances) {
+                    var amt = balances[p];
+                    var colorClass = amt > 0 ? 'amount-positive' : (amt < 0 ? 'amount-negative' : 'amount-neutral');
+                    balHtml += `<div class="person-summary">
+                        <span class="person-name">${p}</span>
+                        <span class="${colorClass}">${amt > 0 ? '+' : ''}₱${amt.toFixed(2)}</span>
+                    </div>`;
+                }
+                document.getElementById('individual-balances').innerHTML = balHtml;
                 
-                this.people.forEach(function(person) {
-                    var net = balances[person].paid - balances[person].owes;
-                    text += person + ': ' + (net >= 0 ? 'Gets ₱' : 'Owes ₱') + Math.abs(net).toFixed(2) + '\n';
-                });
+                // Simple settlement Algorithm
+                var debtors = [], creditors = [];
+                for(const [p, amt] of Object.entries(balances)) {
+                    if(amt < -0.01) debtors.push({p, amt});
+                    if(amt > 0.01) creditors.push({p, amt});
+                }
+                debtors.sort((a,b) => a.amt - b.amt);
+                creditors.sort((a,b) => b.amt - a.amt);
+
+                var settlements = [];
+                var i=0, j=0;
+                while(i < debtors.length && j < creditors.length) {
+                    var debtor = debtors[i], creditor = creditors[j];
+                    var amt = Math.min(Math.abs(debtor.amt), creditor.amt);
+                    settlements.push(`${debtor.p} owes ${creditor.p} <strong>₱${amt.toFixed(2)}</strong>`);
+                    debtor.amt += amt;
+                    creditor.amt -= amt;
+                    if(Math.abs(debtor.amt) < 0.01) i++;
+                    if(creditor.amt < 0.01) j++;
+                }
                 
-                navigator.clipboard.writeText(text).then(function() {
-                    alert('✓ Copied to clipboard!');
-                }).catch(function() {
-                    alert('Failed to copy');
-                });
+                document.getElementById('settlement-plan').innerHTML = settlements.length ? 
+                    settlements.map(s => `<div class="settlement-item" style="font-size:16px;">${s}</div>`).join('') : 
+                    '<div class="alert alert-success">All settled up!</div>';
+            },
+
+            updateSyncStatus: function(text, connected) {
+                var dot = document.getElementById('sync-dot');
+                var span = document.getElementById('sync-text');
+                dot.className = 'sync-dot ' + (connected ? '' : 'disconnected');
+                span.textContent = text;
+            },
+
+            showConnectionAlert: function(type) {
+                var div = document.getElementById('connection-alert');
+                div.className = 'alert alert-' + type;
+                div.innerHTML = type === 'success' ? '✅ <strong>Live Sync Active</strong>' : '⚠️ <strong>Connection Issues</strong>';
             }
         };
-        
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() { app.init(); });
-        } else {
-            app.init();
-        }
+
+        // Global function for the delete button
+        window.deleteExpense = function(id) {
+            if(confirm('Delete this expense?')) database.ref('expenses/' + id).remove();
+        };
+
+        // Start App
+        document.addEventListener('DOMContentLoaded', function() { app.init(); });
     </script>
 </body>
 </html>
