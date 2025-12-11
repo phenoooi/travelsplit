@@ -67,6 +67,11 @@
         
         .sync-dot.disconnected {
             background: #ef4444;
+            animation: none;
+        }
+        
+        .sync-dot.connecting {
+            background: #fbbf24;
         }
         
         @keyframes pulse {
@@ -257,6 +262,13 @@
             font-size: 13px;
         }
         
+        .btn-undo {
+            background: #fbbf24;
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        
         .expense-card {
             background: white;
             border-radius: 12px;
@@ -415,6 +427,37 @@
             gap: 8px;
         }
         
+        .payment-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .payment-history-info {
+            flex: 1;
+        }
+        
+        .payment-history-text {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .payment-history-date {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .payment-history-amount {
+            font-size: 18px;
+            color: #28a745;
+            font-weight: 700;
+        }
+        
         .export-section {
             margin-top: 16px;
             padding: 16px;
@@ -470,6 +513,12 @@
             background: #d1ecf1;
             color: #0c5460;
             border-left: 4px solid #17a2b8;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
         }
         
         .names-grid {
@@ -564,7 +613,7 @@
             <h1 id="trip-name-display">🌍 Expense Tracker</h1>
             <p>Real-time collaborative tracking</p>
             <div class="sync-status">
-                <div class="sync-dot" id="sync-dot"></div>
+                <div class="sync-dot connecting" id="sync-dot"></div>
                 <span id="sync-text">Connecting...</span>
             </div>
         </div>
@@ -572,9 +621,7 @@
         <div class="tabs" id="tabs-container"></div>
         
         <div id="expenses-tab" class="tab-content active">
-            <div class="alert alert-success">
-                <strong>🌐 Live sync active!</strong> Changes appear instantly for everyone.
-            </div>
+            <div id="connection-alert"></div>
             
             <div class="form-section">
                 <h2>Add Expense</h2>
@@ -706,785 +753,738 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 
     <script>
-        (function() {
-            'use strict';
+        var firebaseConfig = {
+            apiKey: "AIzaSyCaZ2OKmF3tC1EQrFKHdfrdd3tJ82oxJCg",
+            authDomain: "traveltrack-4c214.firebaseapp.com",
+            databaseURL: "https://traveltrack-4c214-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "traveltrack-4c214",
+            storageBucket: "traveltrack-4c214.firebasestorage.app",
+            messagingSenderId: "106596988949",
+            appId: "1:106596988949:web:a8c227cea905be15c3361c"
+        };
+        
+        var database;
+        var isFirebaseConfigured = false;
+        
+        var app = {
+            expenses: [],
+            payments: [],
+            paymentHistory: [],
+            people: ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'],
+            tripName: '🌍 Expense Tracker',
+            numPeople: 7,
+            isLoading: false,
+            isConnected: false,
             
-            const firebaseConfig = {
-                apiKey: "AIzaSyCaZ2OKmF3tC1EQrFKHdfrdd3tJ82oxJCg",
-                authDomain: "traveltrack-4c214.firebaseapp.com",
-                databaseURL: "https://traveltrack-4c214-default-rtdb.asia-southeast1.firebasedatabase.app",
-                projectId: "traveltrack-4c214",
-                storageBucket: "traveltrack-4c214.firebasestorage.app",
-                messagingSenderId: "106596988949",
-                appId: "1:106596988949:web:a8c227cea905be15c3361c"
-            };
+            init: function() {
+                this.setupDOM();
+                this.setupEventListeners();
+                this.initializeFirebase();
+            },
             
-            let database;
-            let isFirebaseConfigured = false;
-            
-            try {
-                firebase.initializeApp(firebaseConfig);
-                database = firebase.database();
-                isFirebaseConfigured = true;
-            } catch (error) {
-                console.error('Firebase error:', error);
-            }
-            
-            const app = {
-                expenses: [],
-                payments: [],
-                paymentHistory: [],
-                people: ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'],
-                tripName: '🌍 Expense Tracker',
-                numPeople: 7,
-                isLoading: false,
+            initializeFirebase: function() {
+                var self = this;
                 
-                init: function() {
-                    this.setupDOM();
-                    this.setupEventListeners();
+                try {
+                    console.log('Initializing Firebase...');
                     
-                    if (isFirebaseConfigured) {
-                        this.setupFirebaseListeners();
-                    } else {
-                        this.loadFromLocalStorage();
-                        this.updateSyncStatus('Local Storage', false);
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
                     }
-                },
+                    
+                    database = firebase.database();
+                    
+                    console.log('Testing Firebase connection...');
+                    var testRef = database.ref('.info/connected');
+                    
+                    testRef.on('value', function(snapshot) {
+                        self.isConnected = snapshot.val() === true;
+                        console.log('Firebase connection status:', self.isConnected);
+                        
+                        if (self.isConnected) {
+                            isFirebaseConfigured = true;
+                            self.updateSyncStatus('✅ Connected', true);
+                            self.showConnectionAlert('success');
+                            self.setupFirebaseListeners();
+                        } else {
+                            self.updateSyncStatus('⚠️ Reconnecting...', false);
+                            self.showConnectionAlert('warning');
+                        }
+                    });
+                    
+                    setTimeout(function() {
+                        if (!self.isConnected) {
+                            console.warn('Firebase connection timeout, using localStorage');
+                            self.updateSyncStatus('📱 Local Mode', false);
+                            self.showConnectionAlert('danger');
+                            self.loadFromLocalStorage();
+                        }
+                    }, 5000);
+                    
+                } catch (error) {
+                    console.error('Firebase initialization error:', error);
+                    self.updateSyncStatus('📱 Local Mode', false);
+                    self.showConnectionAlert('danger');
+                    self.loadFromLocalStorage();
+                }
+            },
+            
+            showConnectionAlert: function(type) {
+                var alert = document.getElementById('connection-alert');
+                if (!alert) return;
                 
-                setupDOM: function() {
-                    const dateInput = document.getElementById('expense-date');
-                    if (dateInput) dateInput.valueAsDate = new Date();
-                    
-                    const tripNameInput = document.getElementById('trip-name-input');
-                    if (tripNameInput) tripNameInput.value = this.tripName;
-                    
-                    this.renderTabs();
+                var messages = {
+                    success: '<strong>🌐 Live sync active!</strong> Changes appear instantly for everyone.',
+                    warning: '<strong>⚠️ Reconnecting...</strong> Your changes are saved locally and will sync when connection is restored.',
+                    danger: '<strong>📱 Offline Mode</strong> Using local storage. Changes won\'t sync with others until connection is restored.'
+                };
+                
+                alert.className = 'alert alert-' + type;
+                alert.innerHTML = messages[type] || messages.danger;
+            },
+            
+            setupDOM: function() {
+                var dateInput = document.getElementById('expense-date');
+                if (dateInput) dateInput.valueAsDate = new Date();
+                
+                var tripNameInput = document.getElementById('trip-name-input');
+                if (tripNameInput) tripNameInput.value = this.tripName;
+                
+                this.renderTabs();
+                this.renderNameInputs();
+                this.updateTripNameDisplay();
+            },
+            
+            renderTabs: function() {
+                var tabs = [
+                    { id: 'expenses', label: '💰 Expenses' },
+                    { id: 'settlements', label: '🤝 Settle' },
+                    { id: 'summary', label: '📊 Summary' },
+                    { id: 'settings', label: '⚙️ Settings' }
+                ];
+                
+                document.getElementById('tabs-container').innerHTML = tabs.map(function(tab, i) {
+                    return '<button class="tab ' + (i === 0 ? 'active' : '') + '" data-tab="' + tab.id + '">' + tab.label + '</button>';
+                }).join('');
+            },
+            
+            renderNameInputs: function() {
+                var self = this;
+                var grid = document.getElementById('names-grid');
+                grid.innerHTML = this.people.map(function(person, i) {
+                    return '<div class="form-group"><label>Traveler ' + (i + 1) + '</label><input type="text" id="name-' + i + '" placeholder="Person ' + (i + 1) + '" value="' + person + '"></div>';
+                }).join('');
+            },
+            
+            setupEventListeners: function() {
+                var self = this;
+                
+                document.getElementById('tabs-container').addEventListener('click', function(e) {
+                    if (e.target.classList.contains('tab')) {
+                        self.switchTab(e.target.dataset.tab);
+                    }
+                });
+                
+                document.getElementById('add-expense-btn').addEventListener('click', function() { self.addExpense(); });
+                document.getElementById('save-trip-name-btn').addEventListener('click', function() { self.saveTripName(); });
+                document.getElementById('save-names-btn').addEventListener('click', function() { self.saveNames(); });
+                document.getElementById('add-traveler-btn').addEventListener('click', function() { self.addTraveler(); });
+                document.getElementById('reset-names-btn').addEventListener('click', function() { self.resetNames(); });
+                document.getElementById('export-json-btn').addEventListener('click', function() { self.exportToJSON(); });
+                document.getElementById('export-csv-btn').addEventListener('click', function() { self.exportToCSV(); });
+                document.getElementById('copy-summary-btn').addEventListener('click', function() { self.copyToClipboard(); });
+                document.getElementById('reset-data-btn').addEventListener('click', function() { self.resetAllData(); });
+            },
+            
+            setupFirebaseListeners: function() {
+                var self = this;
+                
+                console.log('Setting up Firebase listeners...');
+                
+                database.ref('expenses').on('value', function(snapshot) {
+                    var data = snapshot.val();
+                    self.expenses = data ? Object.values(data) : [];
+                    console.log('Expenses loaded:', self.expenses.length);
+                    self.renderExpenses();
+                }, function(error) {
+                    console.error('Error loading expenses:', error);
+                });
+                
+                database.ref('payments').on('value', function(snapshot) {
+                    var data = snapshot.val();
+                    self.payments = data || [];
+                    self.calculateSettlements();
+                });
+                
+                database.ref('paymentHistory').on('value', function(snapshot) {
+                    var data = snapshot.val();
+                    self.paymentHistory = data ? Object.values(data) : [];
+                    console.log('Payment history loaded:', self.paymentHistory.length);
+                    self.renderPaymentHistory();
+                    self.calculateSettlements();
+                });
+                
+                database.ref('people').on('value', function(snapshot) {
+                    var data = snapshot.val();
+                    if (data) {
+                        self.people = data;
+                        self.renderNameInputs();
+                        self.populateDropdowns();
+                    }
+                });
+                
+                database.ref('tripName').on('value', function(snapshot) {
+                    var data = snapshot.val();
+                    if (data) {
+                        self.tripName = data;
+                        self.updateTripNameDisplay();
+                        var input = document.getElementById('trip-name-input');
+                        if (input) input.value = data;
+                    }
+                });
+            },
+            
+            loadFromLocalStorage: function() {
+                var saved = {
+                    expenses: localStorage.getItem('japan-expenses'),
+                    payments: localStorage.getItem('japan-payments'),
+                    paymentHistory: localStorage.getItem('japan-paymentHistory'),
+                    people: localStorage.getItem('japan-people'),
+                    tripName: localStorage.getItem('japan-tripName')
+                };
+                
+                if (saved.expenses) this.expenses = JSON.parse(saved.expenses);
+                if (saved.payments) this.payments = JSON.parse(saved.payments);
+                if (saved.paymentHistory) this.paymentHistory = JSON.parse(saved.paymentHistory);
+                if (saved.people) {
+                    this.people = JSON.parse(saved.people);
                     this.renderNameInputs();
+                }
+                if (saved.tripName) {
+                    this.tripName = saved.tripName;
                     this.updateTripNameDisplay();
-                },
+                    var input = document.getElementById('trip-name-input');
+                    if (input) input.value = saved.tripName;
+                }
                 
-                renderTabs: function() {
-                    const tabs = [
-                        { id: 'expenses', label: '💰 Expenses' },
-                        { id: 'settlements', label: '🤝 Settle' },
-                        { id: 'summary', label: '📊 Summary' },
-                        { id: 'settings', label: '⚙️ Settings' }
-                    ];
-                    
-                    document.getElementById('tabs-container').innerHTML = tabs.map((tab, i) => 
-                        `<button class="tab ${i === 0 ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>`
-                    ).join('');
-                },
-                
-                renderNameInputs: function() {
-                    const grid = document.getElementById('names-grid');
-                    grid.innerHTML = this.people.map((person, i) => `
-                        <div class="form-group">
-                            <label>Traveler ${i + 1}</label>
-                            <input type="text" id="name-${i}" placeholder="Person ${i + 1}" value="${person}">
-                        </div>
-                    `).join('');
-                },
-                
-                setupEventListeners: function() {
-                    const self = this;
-                    
-                    document.getElementById('tabs-container').addEventListener('click', function(e) {
-                        if (e.target.classList.contains('tab')) {
-                            self.switchTab(e.target.dataset.tab);
-                        }
-                    });
-                    
-                    document.getElementById('add-expense-btn').addEventListener('click', () => this.addExpense());
-                    document.getElementById('save-trip-name-btn').addEventListener('click', () => this.saveTripName());
-                    document.getElementById('save-names-btn').addEventListener('click', () => this.saveNames());
-                    document.getElementById('add-traveler-btn').addEventListener('click', () => this.addTraveler());
-                    document.getElementById('reset-names-btn').addEventListener('click', () => this.resetNames());
-                    document.getElementById('export-json-btn').addEventListener('click', () => this.exportToJSON());
-                    document.getElementById('export-csv-btn').addEventListener('click', () => this.exportToCSV());
-                    document.getElementById('copy-summary-btn').addEventListener('click', () => this.copyToClipboard());
-                    document.getElementById('reset-data-btn').addEventListener('click', () => this.resetAllData());
-                },
-                
-                setupFirebaseListeners: function() {
-                    const self = this;
-                    
-                    database.ref('expenses').on('value', (snapshot) => {
-                        const data = snapshot.val();
-                        self.expenses = data ? Object.values(data) : [];
-                        self.renderExpenses();
-                        self.updateSyncStatus('✅ Synced', true);
-                    });
-                    
-                    database.ref('payments').on('value', (snapshot) => {
-                        const data = snapshot.val();
-                        self.payments = data || [];
-                        self.calculateSettlements();
-                    });
-                    
-                    database.ref('paymentHistory').on('value', (snapshot) => {
-                        const data = snapshot.val();
-                        self.paymentHistory = data ? Object.values(data) : [];
-                        self.renderPaymentHistory();
-                        self.calculateSettlements();
-                    });
-                    
-                    database.ref('people').on('value', (snapshot) => {
-                        const data = snapshot.val();
-                        if (data) {
-                            self.people = data;
-                            self.renderNameInputs();
-                            self.populateDropdowns();
-                        }
-                    });
-                    
-                    database.ref('tripName').on('value', (snapshot) => {
-                        const data = snapshot.val();
-                        if (data) {
-                            self.tripName = data;
-                            self.updateTripNameDisplay();
-                            const input = document.getElementById('trip-name-input');
-                            if (input) input.value = data;
-                        }
-                    });
-                },
-                
-                loadFromLocalStorage: function() {
-                    const saved = {
-                        expenses: localStorage.getItem('japan-expenses'),
-                        payments: localStorage.getItem('japan-payments'),
-                        paymentHistory: localStorage.getItem('japan-paymentHistory'),
-                        people: localStorage.getItem('japan-people'),
-                        tripName: localStorage.getItem('japan-tripName')
-                    };
-                    
-                    if (saved.expenses) this.expenses = JSON.parse(saved.expenses);
-                    if (saved.payments) this.payments = JSON.parse(saved.payments);
-                    if (saved.paymentHistory) this.paymentHistory = JSON.parse(saved.paymentHistory);
-                    if (saved.people) {
-                        this.people = JSON.parse(saved.people);
-                        this.renderNameInputs();
-                    }
-                    if (saved.tripName) {
-                        this.tripName = saved.tripName;
-                        this.updateTripNameDisplay();
-                        const input = document.getElementById('trip-name-input');
-                        if (input) input.value = saved.tripName;
-                    }
-                    
-                    this.populateDropdowns();
-                    this.renderExpenses();
-                    this.renderPaymentHistory();
-                },
-                
-                saveToFirebase: async function(path, data) {
-                    if (isFirebaseConfigured) {
-                        try {
-                            await database.ref(path).set(data);
-                            return true;
-                        } catch (error) {
-                            console.error('Save error:', error);
-                            return false;
-                        }
-                    } else {
+                this.populateDropdowns();
+                this.renderExpenses();
+                this.renderPaymentHistory();
+            },
+            
+            saveToFirebase: function(path, data, callback) {
+                if (isFirebaseConfigured && this.isConnected) {
+                    database.ref(path).set(data).then(function() {
+                        console.log('Saved to Firebase: ' + path);
+                        if (callback) callback(true);
+                    }).catch(function(error) {
+                        console.error('Save error:', error);
                         localStorage.setItem('japan-' + path, JSON.stringify(data));
-                        return true;
+                        if (callback) callback(false);
+                    });
+                } else {
+                    localStorage.setItem('japan-' + path, JSON.stringify(data));
+                    if (callback) callback(true);
+                }
+            },
+            
+            updateSyncStatus: function(text, connected) {
+                var elem = document.getElementById('sync-text');
+                var dot = document.getElementById('sync-dot');
+                if (elem) elem.textContent = text;
+                if (dot) {
+                    dot.classList.remove('disconnected', 'connecting');
+                    if (!connected) {
+                        dot.classList.add('disconnected');
                     }
-                },
+                }
+            },
+            
+            switchTab: function(tabName) {
+                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
                 
-                updateSyncStatus: function(text, connected) {
-                    const elem = document.getElementById('sync-text');
-                    const dot = document.getElementById('sync-dot');
-                    if (elem) elem.textContent = text;
-                    if (dot) dot.classList.toggle('disconnected', !connected);
-                },
+                document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
+                document.getElementById(tabName + '-tab').classList.add('active');
                 
-                switchTab: function(tabName) {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    
-                    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-                    document.getElementById(tabName + '-tab').classList.add('active');
-                    
-                    if (tabName === 'summary') this.updateSummary();
-                    if (tabName === 'settlements') this.calculateSettlements();
-                    if (tabName === 'settings') {
-                        // Ensure trip name input is populated
-                        const tripInput = document.getElementById('trip-name-input');
-                        if (tripInput && !tripInput.value) {
-                            tripInput.value = this.tripName;
-                        }
+                if (tabName === 'summary') this.updateSummary();
+                if (tabName === 'settlements') this.calculateSettlements();
+                if (tabName === 'settings') {
+                    var tripInput = document.getElementById('trip-name-input');
+                    if (tripInput && !tripInput.value) {
+                        tripInput.value = this.tripName;
                     }
-                },
+                }
+            },
+            
+            populateDropdowns: function() {
+                var paidBySelect = document.getElementById('expense-paidby');
+                var splitCheckboxes = document.getElementById('split-checkboxes');
                 
-                populateDropdowns: function() {
-                    const paidBySelect = document.getElementById('expense-paidby');
-                    const splitCheckboxes = document.getElementById('split-checkboxes');
-                    
-                    if (paidBySelect) {
-                        paidBySelect.innerHTML = this.people.map(p => 
-                            `<option value="${p}">${p}</option>`
-                        ).join('');
-                    }
-                    
-                    if (splitCheckboxes) {
-                        splitCheckboxes.innerHTML = this.people.map((p, i) => `
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="split-person${i}">
-                                <label for="split-person${i}">${p}</label>
-                            </div>
-                        `).join('');
-                    }
-                },
+                if (paidBySelect) {
+                    paidBySelect.innerHTML = this.people.map(function(p) {
+                        return '<option value="' + p + '">' + p + '</option>';
+                    }).join('');
+                }
                 
-                addTraveler: function() {
-                    const newName = prompt('Enter new traveler name:');
-                    if (newName && newName.trim()) {
-                        this.people.push(newName.trim());
-                        this.renderNameInputs();
-                        this.populateDropdowns();
-                        alert('✓ Traveler added! Click "Save Names" to sync with everyone.');
-                    }
-                },
-                
-                updateTripNameDisplay: function() {
-                    const display = document.getElementById('trip-name-display');
-                    if (display) display.textContent = this.tripName;
-                },
-                
-                saveTripName: async function() {
-                    const input = document.getElementById('trip-name-input');
-                    if (input) {
-                        const newName = input.value.trim();
-                        if (newName) {
-                            this.tripName = newName;
-                            this.updateTripNameDisplay();
-                            
-                            const success = await this.saveToFirebase('tripName', this.tripName);
+                if (splitCheckboxes) {
+                    splitCheckboxes.innerHTML = this.people.map(function(p, i) {
+                        return '<div class="checkbox-group"><input type="checkbox" id="split-person' + i + '"><label for="split-person' + i + '">' + p + '</label></div>';
+                    }).join('');
+                }
+            },
+            
+            addTraveler: function() {
+                var newName = prompt('Enter new traveler name:');
+                if (newName && newName.trim()) {
+                    this.people.push(newName.trim());
+                    this.renderNameInputs();
+                    this.populateDropdowns();
+                    alert('✓ Traveler added! Click "Save Names" to sync with everyone.');
+                }
+            },
+            
+            updateTripNameDisplay: function() {
+                var display = document.getElementById('trip-name-display');
+                if (display) display.textContent = this.tripName;
+            },
+            
+            saveTripName: function() {
+                var self = this;
+                var input = document.getElementById('trip-name-input');
+                if (input) {
+                    var newName = input.value.trim();
+                    if (newName) {
+                        this.tripName = newName;
+                        this.updateTripNameDisplay();
+                        
+                        this.saveToFirebase('tripName', this.tripName, function(success) {
                             if (success) {
                                 alert('✓ Trip name saved and synced!');
                             }
-                        }
+                        });
                     }
-                },
+                }
+            },
+            
+            saveNames: function() {
+                var self = this;
+                for (var i = 0; i < this.people.length; i++) {
+                    var input = document.getElementById('name-' + i);
+                    if (input) {
+                        this.people[i] = input.value.trim() || 'Person ' + (i + 1);
+                    }
+                }
                 
-                saveNames: async function() {
-                    for (let i = 0; i < this.people.length; i++) {
-                        const input = document.getElementById(`name-${i}`);
-                        if (input) {
-                            this.people[i] = input.value.trim() || `Person ${i + 1}`;
-                        }
-                    }
-                    
-                    const success = await this.saveToFirebase('people', this.people);
+                this.saveToFirebase('people', this.people, function(success) {
                     if (success) {
                         alert('✓ Names saved!');
-                        this.populateDropdowns();
+                        self.populateDropdowns();
                     }
-                },
-                
-                resetNames: async function() {
-                    if (confirm('Reset all names to 7 default travelers?')) {
-                        this.people = ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'];
-                        this.renderNameInputs();
-                        await this.saveNames();
-                    }
-                },
-                
-                addExpense: async function() {
-                    const btn = document.getElementById('add-expense-btn');
-                    if (this.isLoading) return;
-                    
-                    const date = document.getElementById('expense-date').value;
-                    const description = document.getElementById('expense-description').value;
-                    const category = document.getElementById('expense-category').value;
-                    const amount = parseFloat(document.getElementById('expense-amount').value);
-                    const paidBy = document.getElementById('expense-paidby').value;
-                    
-                    if (!date || !description || !amount || amount <= 0) {
-                        alert('Please fill all fields');
-                        return;
-                    }
-                    
-                    const splitBetween = [];
-                    for (let i = 0; i < this.people.length; i++) {
-                        const checkbox = document.getElementById(`split-person${i}`);
-                        if (checkbox?.checked) splitBetween.push(this.people[i]);
-                    }
-                    
-                    if (splitBetween.length === 0) {
-                        alert('Select at least one person');
-                        return;
-                    }
-                    
-                    this.isLoading = true;
-                    btn.disabled = true;
-                    btn.textContent = 'Saving...';
-                    
-                    const expense = {
-                        id: Date.now(),
-                        date,
-                        description,
-                        category,
-                        amount,
-                        paidBy,
-                        splitBetween
-                    };
-                    
-                    this.expenses.push(expense);
-                    
-                    if (isFirebaseConfigured) {
-                        const expensesObj = {};
-                        this.expenses.forEach(exp => expensesObj[exp.id] = exp);
-                        await this.saveToFirebase('expenses', expensesObj);
-                    } else {
-                        await this.saveToFirebase('expenses', this.expenses);
-                        this.renderExpenses();
-                    }
-                    
-                    document.getElementById('expense-description').value = '';
-                    document.getElementById('expense-amount').value = '';
-                    for (let i = 0; i < this.people.length; i++) {
-                        const checkbox = document.getElementById(`split-person${i}`);
-                        if (checkbox) checkbox.checked = false;
-                    }
-                    
-                    this.isLoading = false;
-                    btn.disabled = false;
-                    btn.textContent = '➕ Add Expense';
-                },
-                
-                deleteExpense: async function(id) {
-                    if (!confirm('Delete this expense?')) return;
-                    
-                    const index = this.expenses.findIndex(e => e.id === id);
-                    if (index === -1) return;
-                    
-                    this.expenses.splice(index, 1);
-                    
-                    if (isFirebaseConfigured) {
-                        await database.ref('expenses/' + id).remove();
-                    } else {
-                        await this.saveToFirebase('expenses', this.expenses);
-                        this.renderExpenses();
-                    }
-                },
-                
-                renderExpenses: function() {
-                    const container = document.getElementById('expenses-list');
-                    if (!container) return;
-                    
-                    if (this.expenses.length === 0) {
-                        container.innerHTML = `
-                            <div class="empty-state">
-                                <svg fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg>
-                                <h3>No expenses yet</h3>
-                                <p>Add your first expense above</p>
-                            </div>
-                        `;
-                        return;
-                    }
-                    
-                    const self = this;
-                    const sorted = [...this.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
-                    
-                    container.innerHTML = sorted.map(exp => {
-                        const perPerson = exp.amount / exp.splitBetween.length;
-                        return `
-                            <div class="expense-card">
-                                <div class="expense-header">
-                                    <div>
-                                        <div class="expense-description">${exp.description}</div>
-                                        <span class="expense-category">${exp.category}</span>
-                                    </div>
-                                    <div class="expense-amount">₱${exp.amount.toFixed(2)}</div>
-                                </div>
-                                <div class="expense-details">
-                                    <div class="expense-detail-row">
-                                        <span>📅 ${exp.date}</span>
-                                        <span><strong>${exp.paidBy}</strong> paid</span>
-                                    </div>
-                                    <div class="expense-detail-row">
-                                        <span>Split: ${exp.splitBetween.length} people</span>
-                                        <span>₱${perPerson.toFixed(2)} each</span>
-                                    </div>
-                                    <div style="font-size: 12px; color: #999;">
-                                        ${exp.splitBetween.join(', ')}
-                                    </div>
-                                </div>
-                                <div class="expense-actions">
-                                    <button class="btn btn-danger" data-delete-id="${exp.id}">🗑️ Delete</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                    
-                    container.querySelectorAll('[data-delete-id]').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            self.deleteExpense(parseInt(this.dataset.deleteId));
-                        });
-                    });
-                },
-                
-                markAsPaid: async function(from, to, amount) {
-                    const settlementId = `${from}→${to}`;
-                    
-                    // Add to payment history
-                    const payment = {
-                        id: Date.now(),
-                        from: from,
-                        to: to,
-                        amount: amount,
-                        date: new Date().toISOString()
-                    };
-                    
-                    this.paymentHistory.push(payment);
-                    
-                    // Add to payments list to hide from pending
-                    if (!this.payments.includes(settlementId)) {
-                        this.payments.push(settlementId);
-                    }
-                    
-                    // Save both
-                    if (isFirebaseConfigured) {
-                        const historyObj = {};
-                        this.paymentHistory.forEach(p => historyObj[p.id] = p);
-                        await database.ref('paymentHistory').set(historyObj);
-                        await this.saveToFirebase('payments', this.payments);
-                    } else {
-                        await this.saveToFirebase('paymentHistory', this.paymentHistory);
-                        await this.saveToFirebase('payments', this.payments);
-                        this.renderPaymentHistory();
-                        this.calculateSettlements();
-                    }
-                },
-                
-                undoPayment: async function(paymentId) {
-                    const payment = this.paymentHistory.find(p => p.id === paymentId);
-                    if (!payment) return;
-                    
-                    if (!confirm(`Undo payment: ${payment.from} → ${payment.to} ₱${payment.amount.toFixed(2)}?`)) return;
-                    
-                    // Remove from history
-                    this.paymentHistory = this.paymentHistory.filter(p => p.id !== paymentId);
-                    
-                    // Save
-                    if (isFirebaseConfigured) {
-                        const historyObj = {};
-                        this.paymentHistory.forEach(p => historyObj[p.id] = p);
-                        await database.ref('paymentHistory').set(historyObj);
-                    } else {
-                        await this.saveToFirebase('paymentHistory', this.paymentHistory);
-                        this.renderPaymentHistory();
-                        this.calculateSettlements();
-                    }
-                },
-                
-                renderPaymentHistory: function() {
-                    const container = document.getElementById('payment-history');
-                    if (!container) return;
-                    
-                    if (this.paymentHistory.length === 0) {
-                        container.innerHTML = '<div class="empty-state"><p style="color: #999;">No payment history yet</p></div>';
-                        return;
-                    }
-                    
-                    const self = this;
-                    const sorted = [...this.paymentHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-                    
-                    container.innerHTML = sorted.map(payment => {
-                        const date = new Date(payment.date);
-                        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        
-                        return `
-                            <div class="payment-history-item">
-                                <div class="payment-history-info">
-                                    <div class="payment-history-text">
-                                        <strong>${payment.from}</strong> paid <strong>${payment.to}</strong>
-                                    </div>
-                                    <div class="payment-history-date">✓ ${dateStr}</div>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div class="payment-history-amount">₱${payment.amount.toFixed(2)}</div>
-                                    <button class="btn btn-undo" data-undo-id="${payment.id}" style="margin-top: 8px;">↩️ Undo</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                    
-                    container.querySelectorAll('[data-undo-id]').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            self.undoPayment(parseInt(this.dataset.undoId));
-                        });
-                    });
-                },
-                
-                updateSummary: function() {
-                    const totalSpent = this.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-                    const avgPerPerson = totalSpent / this.people.length;
-                    
-                    document.getElementById('total-spent').textContent = `₱${totalSpent.toFixed(2)}`;
-                    document.getElementById('per-person-avg').textContent = `₱${avgPerPerson.toFixed(2)}`;
-                    
-                    const balances = {};
-                    this.people.forEach(person => {
-                        balances[person] = { paid: 0, owes: 0 };
-                    });
-                    
-                    this.expenses.forEach(exp => {
-                        balances[exp.paidBy].paid += exp.amount;
-                        const perPerson = exp.amount / exp.splitBetween.length;
-                        exp.splitBetween.forEach(person => {
-                            balances[person].owes += perPerson;
-                        });
-                    });
-                    
-                    let balanceHtml = '';
-                    this.people.forEach(person => {
-                        const net = balances[person].paid - balances[person].owes;
-                        const amountClass = net > 0.01 ? 'amount-positive' : net < -0.01 ? 'amount-negative' : 'amount-neutral';
-                        const status = net > 0.01 ? 'Gets back' : net < -0.01 ? 'Owes' : 'Settled';
-                        
-                        balanceHtml += `
-                            <div class="person-summary">
-                                <div>
-                                    <div class="person-name">${person}</div>
-                                    <div class="person-details">Paid: ₱${balances[person].paid.toFixed(2)} | Share: ₱${balances[person].owes.toFixed(2)}</div>
-                                </div>
-                                <div class="${amountClass}">
-                                    ${status}<br>₱${Math.abs(net).toFixed(2)}
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    document.getElementById('individual-balances').innerHTML = balanceHtml;
-                    
-                    const categories = {};
-                    this.expenses.forEach(exp => {
-                        categories[exp.category] = (categories[exp.category] || 0) + exp.amount;
-                    });
-                    
-                    let categoryHtml = '';
-                    Object.entries(categories).forEach(([cat, amount]) => {
-                        const percentage = (amount / totalSpent * 100).toFixed(1);
-                        categoryHtml += `
-                            <div class="person-summary">
-                                <span>${cat}</span>
-                                <span><strong>₱${amount.toFixed(2)}</strong> (${percentage}%)</span>
-                            </div>
-                        `;
-                    });
-                    
-                    document.getElementById('category-breakdown').innerHTML = categoryHtml || '<p style="color: #999;">No expenses yet</p>';
-                },
-                
-                calculateSettlements: function() {
-                    // Calculate consolidated debts between each pair
-                    const netDebts = {};
-                    
-                    this.expenses.forEach(exp => {
-                        const perPerson = exp.amount / exp.splitBetween.length;
-                        
-                        exp.splitBetween.forEach(person => {
-                            if (person !== exp.paidBy) {
-                                const key = `${person}→${exp.paidBy}`;
-                                netDebts[key] = (netDebts[key] || 0) + perPerson;
-                            }
-                        });
-                    });
-                    
-                    // Now subtract any payments already made
-                    this.paymentHistory.forEach(payment => {
-                        const key = `${payment.from}→${payment.to}`;
-                        if (netDebts[key]) {
-                            netDebts[key] -= payment.amount;
-                            if (netDebts[key] < 0.01) {
-                                delete netDebts[key];
-                            }
-                        }
-                    });
-                    
-                    const settlements = [];
-                    Object.entries(netDebts).forEach(([key, amount]) => {
-                        if (amount > 0.01) {
-                            const [from, to] = key.split('→');
-                            settlements.push({ from, to, amount });
-                        }
-                    });
-                    
-                    const self = this;
-                    const container = document.getElementById('settlement-plan');
-                    
-                    if (settlements.length === 0) {
-                        container.innerHTML = '<div class="empty-state"><h3>✅ All Settled!</h3><p>No pending payments</p></div>';
-                        return;
-                    }
-                    
-                    // Group by person owing
-                    const grouped = {};
-                    settlements.forEach(s => {
-                        if (!grouped[s.from]) grouped[s.from] = [];
-                        grouped[s.from].push(s);
-                    });
-                    
-                    let html = '';
-                    Object.entries(grouped).forEach(([person, debts]) => {
-                        html += `<div style="margin-bottom: 24px;">`;
-                        html += `<h4 style="color: #667eea; margin-bottom: 12px; font-size: 16px;">${person}'s Payments:</h4>`;
-                        
-                        debts.forEach(s => {
-                            html += `
-                                <div class="settlement-item">
-                                    <div class="settlement-info">
-                                        <div class="settlement-text">
-                                            Pay <strong>${s.to}</strong>
-                                        </div>
-                                        <div class="settlement-amount">₱${s.amount.toFixed(2)}</div>
-                                    </div>
-                                    <div class="settlement-actions">
-                                        <button class="btn btn-success" data-pay-from="${s.from}" data-pay-to="${s.to}" data-pay-amount="${s.amount}">✓ Mark as Paid</button>
-                                    </div>
-                                </div>
-                            `;
-                        });
-                        
-                        html += `</div>`;
-                    });
-                    
-                    container.innerHTML = html;
-                    
-                    container.querySelectorAll('[data-pay-from]').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            self.markAsPaid(this.dataset.payFrom, this.dataset.payTo, parseFloat(this.dataset.payAmount));
-                        });
-                    });
-                },
-                
-                markAsPaid: async function(from, to, amount) {
-                    // Add to payment history
-                    const payment = {
-                        id: Date.now(),
-                        from: from,
-                        to: to,
-                        amount: amount,
-                        date: new Date().toISOString()
-                    };
-                    
-                    this.paymentHistory.push(payment);
-                    
-                    // Save payment history
-                    if (isFirebaseConfigured) {
-                        const historyObj = {};
-                        this.paymentHistory.forEach(p => historyObj[p.id] = p);
-                        await database.ref('paymentHistory').set(historyObj);
-                    } else {
-                        await this.saveToFirebase('paymentHistory', this.paymentHistory);
-                        this.renderPaymentHistory();
-                        this.calculateSettlements();
-                    }
-                },
-                
-                resetAllData: async function() {
-                    if (!confirm('⚠️ Delete ALL data? This affects everyone!')) return;
-                    if (!confirm('Are you ABSOLUTELY sure?')) return;
-                    
-                    try {
-                        if (isFirebaseConfigured) {
-                            await database.ref('expenses').remove();
-                            await database.ref('payments').remove();
-                            await database.ref('paymentHistory').remove();
-                        } else {
-                            localStorage.removeItem('japan-expenses');
-                            localStorage.removeItem('japan-payments');
-                            localStorage.removeItem('japan-paymentHistory');
-                        }
-                        
-                        this.expenses = [];
-                        this.payments = [];
-                        this.paymentHistory = [];
-                        this.renderExpenses();
-                        this.renderPaymentHistory();
-                        alert('✓ All data reset');
-                    } catch (error) {
-                        alert('Failed to reset: ' + error.message);
-                    }
-                },
-                
-                exportToJSON: function() {
-                    const data = { expenses: this.expenses, payments: this.payments, people: this.people };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `japan2025-${new Date().toISOString().split('T')[0]}.json`;
-                    a.click();
-                    alert('✓ Exported!');
-                },
-                
-                exportToCSV: function() {
-                    if (this.expenses.length === 0) {
-                        alert('No expenses to export');
-                        return;
-                    }
-                    
-                    let csv = 'Date,Description,Category,Amount,Paid By,Split Between,Per Person\n';
-                    this.expenses.forEach(exp => {
-                        const perPerson = exp.amount / exp.splitBetween.length;
-                        csv += `${exp.date},"${exp.description}",${exp.category},${exp.amount},${exp.paidBy},"${exp.splitBetween.join(', ')}",${perPerson.toFixed(2)}\n`;
-                    });
-                    
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `japan2025-${new Date().toISOString().split('T')[0]}.csv`;
-                    a.click();
-                },
-                
-                copyToClipboard: function() {
-                    const totalSpent = this.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-                    let text = `${this.tripName}\nEXPENSE SUMMARY\n\n`;
-                    text += `Total: ₱${totalSpent.toFixed(2)}\n`;
-                    text += `Per Person: ₱${(totalSpent / this.people.length).toFixed(2)}\n\n`;
-                    
-                    text += `BALANCES:\n`;
-                    const balances = {};
-                    this.people.forEach(person => {
-                        balances[person] = { paid: 0, owes: 0 };
-                    });
-                    
-                    this.expenses.forEach(exp => {
-                        balances[exp.paidBy].paid += exp.amount;
-                        const perPerson = exp.amount / exp.splitBetween.length;
-                        exp.splitBetween.forEach(person => {
-                            balances[person].owes += perPerson;
-                        });
-                    });
-                    
-                    this.people.forEach(person => {
-                        const net = balances[person].paid - balances[person].owes;
-                        text += `${person}: ${net >= 0 ? 'Gets ₱' : 'Owes ₱'}${Math.abs(net).toFixed(2)}\n`;
-                    });
-                    
-                    navigator.clipboard.writeText(text).then(() => {
-                        alert('✓ Copied to clipboard!');
-                    }).catch(() => {
-                        alert('Failed to copy');
-                    });
-                }
-            };
+                });
+            },
             
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => app.init());
-            } else {
-                app.init();
+            resetNames: function() {
+                if (confirm('Reset all names to 7 default travelers?')) {
+                    this.people = ['Person 1', 'Person 2', 'Person 3', 'Person 4', 'Person 5', 'Person 6', 'Person 7'];
+                    this.renderNameInputs();
+                    this.saveNames();
+                }
+            },
+            
+            addExpense: function() {
+                var self = this;
+                var btn = document.getElementById('add-expense-btn');
+                if (this.isLoading) return;
+                
+                var date = document.getElementById('expense-date').value;
+                var description = document.getElementById('expense-description').value;
+                var category = document.getElementById('expense-category').value;
+                var amount = parseFloat(document.getElementById('expense-amount').value);
+                var paidBy = document.getElementById('expense-paidby').value;
+                
+                if (!date || !description || !amount || amount <= 0) {
+                    alert('Please fill all fields');
+                    return;
+                }
+                
+                var splitBetween = [];
+                for (var i = 0; i < this.people.length; i++) {
+                    var checkbox = document.getElementById('split-person' + i);
+                    if (checkbox && checkbox.checked) splitBetween.push(this.people[i]);
+                }
+                
+                if (splitBetween.length === 0) {
+                    alert('Select at least one person');
+                    return;
+                }
+                
+                this.isLoading = true;
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+                
+                var expense = {
+                    id: Date.now(),
+                    date: date,
+                    description: description,
+                    category: category,
+                    amount: amount,
+                    paidBy: paidBy,
+                    splitBetween: splitBetween
+                };
+                
+                this.expenses.push(expense);
+                
+                if (isFirebaseConfigured && this.isConnected) {
+                    var expensesObj = {};
+                    this.expenses.forEach(function(exp) { expensesObj[exp.id] = exp; });
+                    this.saveToFirebase('expenses', expensesObj);
+                } else {
+                    this.saveToFirebase('expenses', this.expenses);
+                    this.renderExpenses();
+                }
+                
+                document.getElementById('expense-description').value = '';
+                document.getElementById('expense-amount').value = '';
+                for (var i = 0; i < this.people.length; i++) {
+                    var checkbox = document.getElementById('split-person' + i);
+                    if (checkbox) checkbox.checked = false;
+                }
+                
+                this.isLoading = false;
+                btn.disabled = false;
+                btn.textContent = '➕ Add Expense';
+            },
+            
+            deleteExpense: function(id) {
+                var self = this;
+                if (!confirm('Delete this expense?')) return;
+                
+                var index = this.expenses.findIndex(function(e) { return e.id === id; });
+                if (index === -1) return;
+                
+                this.expenses.splice(index, 1);
+                
+                if (isFirebaseConfigured && this.isConnected) {
+                    database.ref('expenses/' + id).remove();
+                } else {
+                    this.saveToFirebase('expenses', this.expenses);
+                    this.renderExpenses();
+                }
+            },
+            
+            renderExpenses: function() {
+                var self = this;
+                var container = document.getElementById('expenses-list');
+                if (!container) return;
+                
+                if (this.expenses.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><svg fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg><h3>No expenses yet</h3><p>Add your first expense above</p></div>';
+                    return;
+                }
+                
+                var sorted = this.expenses.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+                
+                container.innerHTML = sorted.map(function(exp) {
+                    var perPerson = exp.amount / exp.splitBetween.length;
+                    return '<div class="expense-card"><div class="expense-header"><div><div class="expense-description">' + exp.description + '</div><span class="expense-category">' + exp.category + '</span></div><div class="expense-amount">₱' + exp.amount.toFixed(2) + '</div></div><div class="expense-details"><div class="expense-detail-row"><span>📅 ' + exp.date + '</span><span><strong>' + exp.paidBy + '</strong> paid</span></div><div class="expense-detail-row"><span>Split: ' + exp.splitBetween.length + ' people</span><span>₱' + perPerson.toFixed(2) + ' each</span></div><div style="font-size: 12px; color: #999;">' + exp.splitBetween.join(', ') + '</div></div><div class="expense-actions"><button class="btn btn-danger" data-delete-id="' + exp.id + '">🗑️ Delete</button></div></div>';
+                }).join('');
+                
+                container.querySelectorAll('[data-delete-id]').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        self.deleteExpense(parseInt(this.dataset.deleteId));
+                    });
+                });
+            },
+            
+            markAsPaid: function(from, to, amount) {
+                var self = this;
+                var payment = {
+                    id: Date.now(),
+                    from: from,
+                    to: to,
+                    amount: amount,
+                    date: new Date().toISOString()
+                };
+                
+                this.paymentHistory.push(payment);
+                
+                if (isFirebaseConfigured && this.isConnected) {
+                    var historyObj = {};
+                    this.paymentHistory.forEach(function(p) { historyObj[p.id] = p; });
+                    database.ref('paymentHistory').set(historyObj);
+                } else {
+                    this.saveToFirebase('paymentHistory', this.paymentHistory);
+                    this.renderPaymentHistory();
+                    this.calculateSettlements();
+                }
+            },
+            
+            undoPayment: function(paymentId) {
+                var self = this;
+                var payment = this.paymentHistory.find(function(p) { return p.id === paymentId; });
+                if (!payment) return;
+                
+                if (!confirm('Undo payment: ' + payment.from + ' → ' + payment.to + ' ₱' + payment.amount.toFixed(2) + '?')) return;
+                
+                this.paymentHistory = this.paymentHistory.filter(function(p) { return p.id !== paymentId; });
+                
+                if (isFirebaseConfigured && this.isConnected) {
+                    var historyObj = {};
+                    this.paymentHistory.forEach(function(p) { historyObj[p.id] = p; });
+                    database.ref('paymentHistory').set(historyObj);
+                } else {
+                    this.saveToFirebase('paymentHistory', this.paymentHistory);
+                    this.renderPaymentHistory();
+                    this.calculateSettlements();
+                }
+            },
+            
+            renderPaymentHistory: function() {
+                var self = this;
+                var container = document.getElementById('payment-history');
+                if (!container) return;
+                
+                if (this.paymentHistory.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p style="color: #999;">No payment history yet</p></div>';
+                    return;
+                }
+                
+                var sorted = this.paymentHistory.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+                
+                container.innerHTML = sorted.map(function(payment) {
+                    var date = new Date(payment.date);
+                    var dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    return '<div class="payment-history-item"><div class="payment-history-info"><div class="payment-history-text"><strong>' + payment.from + '</strong> paid <strong>' + payment.to + '</strong></div><div class="payment-history-date">✓ ' + dateStr + '</div></div><div style="text-align: right;"><div class="payment-history-amount">₱' + payment.amount.toFixed(2) + '</div><button class="btn btn-undo" data-undo-id="' + payment.id + '" style="margin-top: 8px;">↩️ Undo</button></div></div>';
+                }).join('');
+                
+                container.querySelectorAll('[data-undo-id]').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        self.undoPayment(parseInt(this.dataset.undoId));
+                    });
+                });
+            },
+            
+            updateSummary: function() {
+                var self = this;
+                var totalSpent = this.expenses.reduce(function(sum, exp) { return sum + exp.amount; }, 0);
+                var avgPerPerson = totalSpent / this.people.length;
+                
+                document.getElementById('total-spent').textContent = '₱' + totalSpent.toFixed(2);
+                document.getElementById('per-person-avg').textContent = '₱' + avgPerPerson.toFixed(2);
+                
+                var balances = {};
+                this.people.forEach(function(person) {
+                    balances[person] = { paid: 0, owes: 0 };
+                });
+                
+                this.expenses.forEach(function(exp) {
+                    balances[exp.paidBy].paid += exp.amount;
+                    var perPerson = exp.amount / exp.splitBetween.length;
+                    exp.splitBetween.forEach(function(person) {
+                        balances[person].owes += perPerson;
+                    });
+                });
+                
+                var balanceHtml = '';
+                this.people.forEach(function(person) {
+                    var net = balances[person].paid - balances[person].owes;
+                    var amountClass = net > 0.01 ? 'amount-positive' : net < -0.01 ? 'amount-negative' : 'amount-neutral';
+                    var status = net > 0.01 ? 'Gets back' : net < -0.01 ? 'Owes' : 'Settled';
+                    
+                    balanceHtml += '<div class="person-summary"><div><div class="person-name">' + person + '</div><div class="person-details">Paid: ₱' + balances[person].paid.toFixed(2) + ' | Share: ₱' + balances[person].owes.toFixed(2) + '</div></div><div class="' + amountClass + '">' + status + '<br>₱' + Math.abs(net).toFixed(2) + '</div></div>';
+                });
+                
+                document.getElementById('individual-balances').innerHTML = balanceHtml;
+                
+                var categories = {};
+                this.expenses.forEach(function(exp) {
+                    categories[exp.category] = (categories[exp.category] || 0) + exp.amount;
+                });
+                
+                var categoryHtml = '';
+                Object.entries(categories).forEach(function(entry) {
+                    var cat = entry[0];
+                    var amount = entry[1];
+                    var percentage = (amount / totalSpent * 100).toFixed(1);
+                    categoryHtml += '<div class="person-summary"><span>' + cat + '</span><span><strong>₱' + amount.toFixed(2) + '</strong> (' + percentage + '%)</span></div>';
+                });
+                
+                document.getElementById('category-breakdown').innerHTML = categoryHtml || '<p style="color: #999;">No expenses yet</p>';
+            },
+            
+            calculateSettlements: function() {
+                var self = this;
+                var netDebts = {};
+                
+                this.expenses.forEach(function(exp) {
+                    var perPerson = exp.amount / exp.splitBetween.length;
+                    
+                    exp.splitBetween.forEach(function(person) {
+                        if (person !== exp.paidBy) {
+                            var key = person + '→' + exp.paidBy;
+                            netDebts[key] = (netDebts[key] || 0) + perPerson;
+                        }
+                    });
+                });
+                
+                this.paymentHistory.forEach(function(payment) {
+                    var key = payment.from + '→' + payment.to;
+                    if (netDebts[key]) {
+                        netDebts[key] -= payment.amount;
+                        if (netDebts[key] < 0.01) {
+                            delete netDebts[key];
+                        }
+                    }
+                });
+                
+                var settlements = [];
+                Object.entries(netDebts).forEach(function(entry) {
+                    var key = entry[0];
+                    var amount = entry[1];
+                    if (amount > 0.01) {
+                        var parts = key.split('→');
+                        settlements.push({ from: parts[0], to: parts[1], amount: amount });
+                    }
+                });
+                
+                var container = document.getElementById('settlement-plan');
+                
+                if (settlements.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><h3>✅ All Settled!</h3><p>No pending payments</p></div>';
+                    return;
+                }
+                
+                var grouped = {};
+                settlements.forEach(function(s) {
+                    if (!grouped[s.from]) grouped[s.from] = [];
+                    grouped[s.from].push(s);
+                });
+                
+                var html = '';
+                Object.entries(grouped).forEach(function(entry) {
+                    var person = entry[0];
+                    var debts = entry[1];
+                    html += '<div style="margin-bottom: 24px;"><h4 style="color: #667eea; margin-bottom: 12px; font-size: 16px;">' + person + '\'s Payments:</h4>';
+                    
+                    debts.forEach(function(s) {
+                        html += '<div class="settlement-item"><div class="settlement-info"><div class="settlement-text">Pay <strong>' + s.to + '</strong></div><div class="settlement-amount">₱' + s.amount.toFixed(2) + '</div></div><div class="settlement-actions"><button class="btn btn-success" data-pay-from="' + s.from + '" data-pay-to="' + s.to + '" data-pay-amount="' + s.amount + '">✓ Mark as Paid</button></div></div>';
+                    });
+                    
+                    html += '</div>';
+                });
+                
+                container.innerHTML = html;
+                
+                container.querySelectorAll('[data-pay-from]').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        self.markAsPaid(this.dataset.payFrom, this.dataset.payTo, parseFloat(this.dataset.payAmount));
+                    });
+                });
+            },
+            
+            resetAllData: function() {
+                var self = this;
+                if (!confirm('⚠️ Delete ALL data? This affects everyone!')) return;
+                if (!confirm('Are you ABSOLUTELY sure?')) return;
+                
+                try {
+                    if (isFirebaseConfigured && this.isConnected) {
+                        database.ref('expenses').remove();
+                        database.ref('payments').remove();
+                        database.ref('paymentHistory').remove();
+                    } else {
+                        localStorage.removeItem('japan-expenses');
+                        localStorage.removeItem('japan-payments');
+                        localStorage.removeItem('japan-paymentHistory');
+                    }
+                    
+                    this.expenses = [];
+                    this.payments = [];
+                    this.paymentHistory = [];
+                    this.renderExpenses();
+                    this.renderPaymentHistory();
+                    alert('✓ All data reset');
+                } catch (error) {
+                    alert('Failed to reset: ' + error.message);
+                }
+            },
+            
+            exportToJSON: function() {
+                var data = { expenses: this.expenses, payments: this.payments, people: this.people, paymentHistory: this.paymentHistory };
+                var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'expense-tracker-' + new Date().toISOString().split('T')[0] + '.json';
+                a.click();
+                alert('✓ Exported!');
+            },
+            
+            exportToCSV: function() {
+                if (this.expenses.length === 0) {
+                    alert('No expenses to export');
+                    return;
+                }
+                
+                var csv = 'Date,Description,Category,Amount,Paid By,Split Between,Per Person\n';
+                this.expenses.forEach(function(exp) {
+                    var perPerson = exp.amount / exp.splitBetween.length;
+                    csv += exp.date + ',"' + exp.description + '",' + exp.category + ',' + exp.amount + ',' + exp.paidBy + ',"' + exp.splitBetween.join(', ') + '",' + perPerson.toFixed(2) + '\n';
+                });
+                
+                var blob = new Blob([csv], { type: 'text/csv' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'expense-tracker-' + new Date().toISOString().split('T')[0] + '.csv';
+                a.click();
+            },
+            
+            copyToClipboard: function() {
+                var self = this;
+                var totalSpent = this.expenses.reduce(function(sum, exp) { return sum + exp.amount; }, 0);
+                var text = this.tripName + '\nEXPENSE SUMMARY\n\n';
+                text += 'Total: ₱' + totalSpent.toFixed(2) + '\n';
+                text += 'Per Person: ₱' + (totalSpent / this.people.length).toFixed(2) + '\n\n';
+                
+                text += 'BALANCES:\n';
+                var balances = {};
+                this.people.forEach(function(person) {
+                    balances[person] = { paid: 0, owes: 0 };
+                });
+                
+                this.expenses.forEach(function(exp) {
+                    balances[exp.paidBy].paid += exp.amount;
+                    var perPerson = exp.amount / exp.splitBetween.length;
+                    exp.splitBetween.forEach(function(person) {
+                        balances[person].owes += perPerson;
+                    });
+                });
+                
+                this.people.forEach(function(person) {
+                    var net = balances[person].paid - balances[person].owes;
+                    text += person + ': ' + (net >= 0 ? 'Gets ₱' : 'Owes ₱') + Math.abs(net).toFixed(2) + '\n';
+                });
+                
+                navigator.clipboard.writeText(text).then(function() {
+                    alert('✓ Copied to clipboard!');
+                }).catch(function() {
+                    alert('Failed to copy');
+                });
             }
-        })();
+        };
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() { app.init(); });
+        } else {
+            app.init();
+        }
     </script>
 </body>
 </html>
